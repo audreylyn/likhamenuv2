@@ -1,0 +1,15 @@
+node_modules
+.env
+.env.local
+.DS_Store
+*.log
+.vscode
+.idea
+*.md
+!README.md
+database-schema.sql
+*.sql
+server.js
+src/test-*.ts
+src/check-*.ts
+

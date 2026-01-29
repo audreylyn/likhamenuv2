@@ -1,0 +1,36 @@
+=== BUSINESS INFORMATION ===
+Business Name: The Golden Crumb Bakery
+Location: 123 Baker Street, Culinary District, FL 33101
+Phone: (555) 123-4567
+Email: info@goldencrumb.com
+Website: www.goldencrumb.com
+
+=== HOURS ===
+Monday - Friday: 7:00 AM - 7:00 PM
+Saturday - Sunday: 8:00 AM - 5:00 PM
+Closed on major holidays
+
+=== PRODUCTS ===
+- Fresh sourdough bread (daily)
+- Artisan croissants (morning only)
+- Custom cakes (order 48 hours in advance)
+- Gluten-free options available
+- Vegan pastries available
+
+=== DELIVERY ===
+- Free delivery for orders over ₱500
+- Delivery radius: 5 miles
+- Available on GrabFood and FoodPanda
+- Delivery hours: Same as store hours
+
+=== POLICIES ===
+- Custom orders require 48-hour notice
+- Refunds available within 24 hours
+- We accept cash, credit cards, and digital payments
+- Gift cards available
+
+=== SPECIAL OFFERS ===
+- Happy Hour: 20% off pastries 2PM-4PM weekdays
+- Weekend Special: Buy 2 croissants, get 1 free
+- Birthday Cakes: 10% off with 7-day advance order
+

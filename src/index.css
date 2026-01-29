@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Default theme colors (will be overridden by theme preset) */
+  --bakery-primary: #8B4513;
+  --bakery-accent: #D2691E;
+  --bakery-cream: #FFF8E7;
+  --bakery-dark: #5D4037;
+  --bakery-light: #FFFFFF;
+  --bakery-text: #333333;
+  --bakery-beige: #F5F5DC;
+  --bakery-sand: #E6DCC3;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bakery-cream);
+  color: var(--bakery-dark);
+}
+
