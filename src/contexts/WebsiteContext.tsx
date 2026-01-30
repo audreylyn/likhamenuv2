@@ -1,28 +1,31 @@
 /**
  * Website Context
  * Manages current website state (for client sites and editor)
- * OPTIMIZED: Single Supabase request for initial load
- * CACHE: Uses localStorage for stale-while-revalidate pattern
+ * OPTIMIZED: Simple caching with direct fetch
  */
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 import { supabase } from "../lib/supabase";
 import { getSubdomain } from "../lib/website-detector";
 import type { WebsiteContextType } from "../types/auth.types";
 
-// Cache configuration
+// Simple cache configuration
 const CACHE_KEY_PREFIX = "likhamenu_website_";
-const CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes for fresh cache
-const STALE_CACHE_MAX_MS = 24 * 60 * 60 * 1000; // 24 hours max staleness
+const CACHE_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
 
 interface CachedWebsite {
   data: any;
   timestamp: number;
-  subdomain: string;
 }
 
 // Helper to get cached website data
-const getCachedWebsite = (subdomain: string): CachedWebsite | null => {
+const getCachedWebsite = (subdomain: string): any | null => {
   try {
     const cached = localStorage.getItem(CACHE_KEY_PREFIX + subdomain);
     if (!cached) return null;
@@ -30,13 +33,13 @@ const getCachedWebsite = (subdomain: string): CachedWebsite | null => {
     const parsed = JSON.parse(cached) as CachedWebsite;
     const age = Date.now() - parsed.timestamp;
 
-    // Return null if cache is too old (beyond max staleness)
-    if (age > STALE_CACHE_MAX_MS) {
+    // Return null if cache is expired
+    if (age > CACHE_EXPIRY_MS) {
       localStorage.removeItem(CACHE_KEY_PREFIX + subdomain);
       return null;
     }
 
-    return parsed;
+    return parsed.data;
   } catch (e) {
     return null;
   }
@@ -48,19 +51,11 @@ const setCachedWebsite = (subdomain: string, data: any) => {
     const cached: CachedWebsite = {
       data,
       timestamp: Date.now(),
-      subdomain,
     };
     localStorage.setItem(CACHE_KEY_PREFIX + subdomain, JSON.stringify(cached));
   } catch (e) {
     // Storage full or unavailable - ignore
-    console.warn("[WebsiteContext] Could not cache website data:", e);
   }
-};
-
-// Check if cache is still fresh
-const isCacheFresh = (cached: CachedWebsite | null): boolean => {
-  if (!cached) return false;
-  return Date.now() - cached.timestamp < CACHE_EXPIRY_MS;
 };
 
 export const WebsiteContext = createContext<WebsiteContextType | undefined>(
@@ -76,175 +71,10 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
     Record<string, boolean>
   >({});
   const [loading, setLoading] = useState(true);
-  const [contentVersion, setContentVersion] = useState(0); // Version counter for refresh
-
-  // Ref to prevent double-calling in React Strict Mode
-  const isLoadingRef = React.useRef(false);
-
-  useEffect(() => {
-    // Prevent double-calling in React Strict Mode
-    if (isLoadingRef.current) {
-      console.log("[WebsiteContext] Already loading, skipping duplicate call");
-      return;
-    }
-    isLoadingRef.current = true;
-
-    // Don't block render - load website data asynchronously
-    detectAndLoadWebsite().catch(console.error);
-  }, []);
-
-  // OPTIMIZED: Single query to detect AND load website data
-  // Uses stale-while-revalidate caching for instant loads
-  const detectAndLoadWebsite = async () => {
-    try {
-      // Check if running in browser
-      if (typeof window === "undefined") {
-        setLoading(false);
-        return;
-      }
-
-      const hostname = window.location.hostname;
-      const params = new URLSearchParams(window.location.search);
-
-      // Get subdomain or site parameter
-      const siteParam = params.get("site") || params.get("website");
-      const subdomain = siteParam || getSubdomain(hostname);
-
-      if (!subdomain) {
-        setLoading(false);
-        return;
-      }
-
-      // Check cache first for instant loading (stale-while-revalidate)
-      const cached = getCachedWebsite(subdomain);
-      if (cached && cached.data) {
-        console.log("[WebsiteContext] Using cached data for", subdomain);
-        sessionStorage.removeItem("inactive_website");
-        setCurrentWebsite(cached.data.id);
-        processWebsiteData(cached.data);
-
-        // If cache is still fresh, don't revalidate
-        if (isCacheFresh(cached)) {
-          console.log("[WebsiteContext] Cache is fresh, skipping revalidation");
-          return;
-        }
-
-        // Cache is stale - revalidate in background (don't await)
-        console.log(
-          "[WebsiteContext] Cache is stale, revalidating in background",
-        );
-        revalidateWebsiteData(subdomain, hostname).catch(console.error);
-        return;
-      }
-
-      // No cache - fetch from network
-      await fetchAndCacheWebsite(subdomain, hostname);
-    } catch (error) {
-      console.error("[WebsiteContext] Error detecting website:", error);
-      setLoading(false);
-    }
-  };
-
-  // Fetch website data and cache it
-  const fetchAndCacheWebsite = async (subdomain: string, hostname: string) => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-    try {
-      // On localhost, allow both published and draft websites for development
-      const isLocalhost =
-        hostname === "localhost" || hostname.startsWith("127.");
-      const statusFilter = isLocalhost ? "" : "&status=eq.published";
-
-      const response = await fetch(
-        `${supabaseUrl}/rest/v1/websites?subdomain=eq.${subdomain}${statusFilter}&select=id,title,subdomain,status,theme,content,enabledsections,messenger,contactformconfig`,
-        {
-          headers: {
-            apikey: supabaseKey,
-            Authorization: `Bearer ${supabaseKey}`,
-          },
-          signal: controller.signal,
-        },
-      );
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const websites = await response.json();
-
-      if (websites && websites.length > 0) {
-        const website = websites[0];
-        sessionStorage.removeItem("inactive_website");
-
-        // Cache the website data
-        setCachedWebsite(subdomain, website);
-
-        setCurrentWebsite(website.id);
-        processWebsiteData(website);
-        return;
-      } else {
-        setLoading(false);
-        return;
-      }
-    } catch (fetchError: any) {
-      clearTimeout(timeoutId);
-      console.error("[WebsiteContext] Fetch failed:", fetchError.message);
-      setLoading(false);
-      return;
-    }
-  };
-
-  // Revalidate stale cache in background
-  const revalidateWebsiteData = async (subdomain: string, hostname: string) => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-    try {
-      const isLocalhost =
-        hostname === "localhost" || hostname.startsWith("127.");
-      const statusFilter = isLocalhost ? "" : "&status=eq.published";
-
-      const response = await fetch(
-        `${supabaseUrl}/rest/v1/websites?subdomain=eq.${subdomain}${statusFilter}&select=id,title,subdomain,status,theme,content,enabledsections,messenger,contactformconfig`,
-        {
-          headers: {
-            apikey: supabaseKey,
-            Authorization: `Bearer ${supabaseKey}`,
-          },
-        },
-      );
-
-      if (!response.ok) return;
-
-      const websites = await response.json();
-      if (websites && websites.length > 0) {
-        const website = websites[0];
-
-        // Update cache
-        setCachedWebsite(subdomain, website);
-
-        // Only update state if data changed (compare JSON)
-        const cached = getCachedWebsite(subdomain);
-        if (cached && JSON.stringify(cached.data) !== JSON.stringify(website)) {
-          console.log(
-            "[WebsiteContext] Background revalidation found new data",
-          );
-          setCurrentWebsite(website.id);
-          processWebsiteData(website);
-        }
-      }
-    } catch (error) {
-      console.warn("[WebsiteContext] Background revalidation failed:", error);
-    }
-  };
+  const [contentVersion, setContentVersion] = useState(0);
 
   // Process website data and update state
-  const processWebsiteData = (website: any) => {
+  const processWebsiteData = useCallback((website: any) => {
     setWebsiteData(website);
 
     // Update document title with website name
@@ -285,8 +115,99 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
     });
     setSectionVisibility(visibility);
 
-    // Only set loading to false after all data is processed
     setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    detectAndLoadWebsite();
+  }, []);
+
+  // Detect website from URL and load data
+  const detectAndLoadWebsite = async () => {
+    try {
+      if (typeof window === "undefined") {
+        setLoading(false);
+        return;
+      }
+
+      const hostname = window.location.hostname;
+      const params = new URLSearchParams(window.location.search);
+
+      // Get subdomain or site parameter
+      const siteParam = params.get("site") || params.get("website");
+      const subdomain = siteParam || getSubdomain(hostname);
+
+      if (!subdomain) {
+        setLoading(false);
+        return;
+      }
+
+      // Check cache first for instant loading
+      const cached = getCachedWebsite(subdomain);
+      if (cached) {
+        console.log("[WebsiteContext] Using cached data for", subdomain);
+        sessionStorage.removeItem("inactive_website");
+        setCurrentWebsite(cached.id);
+        processWebsiteData(cached);
+        return;
+      }
+
+      // No cache - fetch from network
+      await fetchWebsite(subdomain, hostname);
+    } catch (error) {
+      console.error("[WebsiteContext] Error detecting website:", error);
+      setLoading(false);
+    }
+  };
+
+  // Fetch website data from Supabase
+  const fetchWebsite = async (subdomain: string, hostname: string) => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const isLocalhost =
+        hostname === "localhost" || hostname.startsWith("127.");
+      const statusFilter = isLocalhost ? "" : "&status=eq.published";
+
+      const response = await fetch(
+        `${supabaseUrl}/rest/v1/websites?subdomain=eq.${subdomain}${statusFilter}&select=id,title,subdomain,status,theme,content,enabledsections,messenger,contactformconfig`,
+        {
+          headers: {
+            apikey: supabaseKey,
+            Authorization: `Bearer ${supabaseKey}`,
+          },
+          signal: controller.signal,
+        },
+      );
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const websites = await response.json();
+
+      if (websites && websites.length > 0) {
+        const website = websites[0];
+        sessionStorage.removeItem("inactive_website");
+
+        // Cache the website data
+        setCachedWebsite(subdomain, website);
+
+        setCurrentWebsite(website.id);
+        processWebsiteData(website);
+      } else {
+        setLoading(false);
+      }
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      console.error("[WebsiteContext] Fetch failed:", fetchError.message);
+      setLoading(false);
+    }
   };
 
   const applyThemeColors = (colors: any) => {
