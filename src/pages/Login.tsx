@@ -14,7 +14,7 @@ export const Login: React.FC = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [justLoggedIn, setJustLoggedIn] = useState(false);
-  const { signIn, user, loading: authLoading } = useAuth();
+  const { signIn, user } = useAuth();
   const navigate = useNavigate();
 
   // Set page title
@@ -24,7 +24,7 @@ export const Login: React.FC = () => {
 
   // Handle redirect after successful login
   useEffect(() => {
-    if (justLoggedIn && user && !authLoading) {
+    if (justLoggedIn && user) {
       const from = new URLSearchParams(window.location.search).get("from");
 
       if (from) {
@@ -36,18 +36,18 @@ export const Login: React.FC = () => {
       }
       setJustLoggedIn(false);
     }
-  }, [justLoggedIn, user, authLoading, navigate]);
+  }, [justLoggedIn, user, navigate]);
 
   // Redirect if already logged in
   useEffect(() => {
-    if (!authLoading && user) {
+    if (user) {
       if (user.role === "admin") {
         navigate("/admin");
       } else {
         navigate("/websites");
       }
     }
-  }, [user, authLoading, navigate]);
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,21 +55,21 @@ export const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      console.log('Attempting login for:', email);
+      console.log("Attempting login for:", email);
       await signIn(email, password);
-      console.log('Login successful');
+      console.log("Login successful");
       setJustLoggedIn(true);
     } catch (err: any) {
-      console.error('Login failed:', err);
+      console.error("Login failed:", err);
       // Provide more specific error messages
-      if (err.message?.includes('Invalid login credentials')) {
-        setError('Invalid email or password. Please check your credentials.');
-      } else if (err.message?.includes('Email not confirmed')) {
-        setError('Please verify your email address before logging in.');
-      } else if (err.message?.includes('Network')) {
-        setError('Network error. Please check your connection and try again.');
+      if (err.message?.includes("Invalid login credentials")) {
+        setError("Invalid email or password. Please check your credentials.");
+      } else if (err.message?.includes("Email not confirmed")) {
+        setError("Please verify your email address before logging in.");
+      } else if (err.message?.includes("Network")) {
+        setError("Network error. Please check your connection and try again.");
       } else {
-        setError(err.message || 'Login failed. Please try again.');
+        setError(err.message || "Login failed. Please try again.");
       }
       setLoading(false);
     }
