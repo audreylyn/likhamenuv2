@@ -46,10 +46,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signIn = async (email: string, password: string) => {
-    // Just sign in - the onAuthStateChange listener will handle checkUser()
-    // This avoids calling checkUser() twice (once here, once from listener)
-    await authSignIn(email, password);
-    // Note: Don't call checkUser() here - the 'SIGNED_IN' event will trigger it
+    const data = await authSignIn(email, password);
+
+    // Immediately set user state for faster UI update
+    if (data.user) {
+      const profile = {
+        id: data.user.id,
+        email: data.user.email || '',
+        full_name: data.user.user_metadata?.full_name || null,
+        avatar_url: data.user.user_metadata?.avatar_url || null,
+        role: data.user.user_metadata?.role || 'editor',
+        is_active: true,
+        created_at: data.user.created_at,
+        updated_at: data.user.updated_at || data.user.created_at,
+      };
+      setUser(profile);
+    }
   };
 
   const signOut = async () => {

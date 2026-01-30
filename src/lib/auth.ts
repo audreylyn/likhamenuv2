@@ -75,11 +75,16 @@ export async function canAccessWebsite(websiteId: string): Promise<boolean> {
       return false;
     }
 
+    if (!data) return false;
+
+    // Cast to expected type since Supabase types might be inferred strictly
+    const website = data as { owner: string; assignededitors: any };
+
     // Check if owner
-    if (data?.owner === user.id) return true;
+    if (website.owner === user.id) return true;
 
     // Check if in assignededitors array (by email)
-    const assignedEditors = (data?.assignededitors as string[]) || [];
+    const assignedEditors = (website.assignededitors as string[]) || [];
     if (user.email && assignedEditors.includes(user.email)) return true;
 
     return false;
@@ -128,20 +133,19 @@ export async function getUserWebsites(): Promise<any[]> {
 
 /**
  * Sign in user
+ * Returns user data immediately for faster UI update
  */
 export async function signIn(email: string, password: string) {
-  console.log('signIn called for:', email);
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
   if (error) {
-    console.error('Supabase signIn error:', error);
     throw error;
   }
 
-  console.log('signIn success, user:', data.user?.email);
+  // Return the user data so caller can update state immediately
   return data;
 }
 

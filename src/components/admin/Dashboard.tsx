@@ -30,27 +30,21 @@ export const Dashboard: React.FC = () => {
 
   const loadStats = async () => {
     try {
-      // Get websites count
-      const { count: websitesCount } = await supabase
+      // Single query - get all websites and calculate stats client-side
+      const { data: websites, error } = await supabase
         .from("websites")
-        .select("*", { count: "exact", head: true });
+        .select("id, status");
 
-      // Get published websites count
-      const { count: activeCount } = await supabase
-        .from("websites")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "published");
+      if (error) throw error;
 
-      // Get draft websites count
-      const { count: inactiveCount } = await supabase
-        .from("websites")
-        .select("*", { count: "exact", head: true })
-        .neq("status", "published");
+      const all = websites as { id: string; status: string }[] || [];
+      const active = all.filter(w => w.status === 'published');
+      const inactive = all.filter(w => w.status !== 'published');
 
       setStats({
-        totalWebsites: websitesCount || 0,
-        activeWebsites: activeCount || 0,
-        inactiveWebsites: inactiveCount || 0,
+        totalWebsites: all.length,
+        activeWebsites: active.length,
+        inactiveWebsites: inactive.length,
         totalUsers: 0,
       });
     } catch (error) {
