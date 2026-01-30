@@ -247,9 +247,8 @@ export const PublicSite: React.FC = () => {
           <InstagramFeed />
         </ConditionalSection>
       </main>
-      <ConditionalSection section="footer">
-        <Footer />
-      </ConditionalSection>
+      {/* Footer is always shown - it's essential for navigation/contact info */}
+      <Footer />
       <ConditionalSection section="chatSupport">
         <ChatSupport />
       </ConditionalSection>

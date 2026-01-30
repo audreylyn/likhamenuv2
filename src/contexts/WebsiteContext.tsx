@@ -91,6 +91,7 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Build section visibility map from enabledsections JSONB array
     const enabledSections = (website?.enabledsections as string[]) || [];
+
     const allSections = [
       "hero",
       "about",

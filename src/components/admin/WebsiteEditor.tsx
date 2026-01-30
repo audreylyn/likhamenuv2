@@ -7,7 +7,15 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
-import { ArrowLeft, Save, Palette, MessageCircle, Globe } from "lucide-react";
+import {
+  ArrowLeft,
+  Save,
+  Palette,
+  MessageCircle,
+  Globe,
+  Wand2,
+} from "lucide-react";
+import { populateDefaultContent } from "../../lib/default-content";
 
 // Default theme colors
 const DEFAULT_THEMES = [
@@ -78,7 +86,9 @@ export const WebsiteEditor: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [populating, setPopulating] = useState(false);
   const [website, setWebsite] = useState<any>(null);
+  const [hasEmptyContent, setHasEmptyContent] = useState(false);
 
   // Form state
   const [title, setTitle] = useState("");
@@ -113,6 +123,13 @@ export const WebsiteEditor: React.FC = () => {
       if (websiteError) throw websiteError;
       setWebsite(websiteData);
 
+      // Check if content is empty (no sections initialized)
+      const content = websiteData.content || {};
+      const contentKeys = Object.keys(content).filter(
+        (k) => k !== "chatSupport",
+      );
+      setHasEmptyContent(contentKeys.length === 0);
+
       // Populate form from website data
       setTitle(websiteData.title || "");
       setSubdomain(websiteData.subdomain || "");
@@ -122,7 +139,6 @@ export const WebsiteEditor: React.FC = () => {
       setSelectedTheme(theme.preset || "warm-bakery");
 
       // Chat support from content.chatSupport JSONB
-      const content = websiteData.content || {};
       const chatSupport = content.chatSupport || {};
       setChatSupportEnabled(chatSupport.enabled || false);
       setGreetingMessage(
@@ -148,6 +164,30 @@ export const WebsiteEditor: React.FC = () => {
       console.error("Error loading data:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePopulateContent = async () => {
+    if (!websiteId) return;
+
+    const confirmed = window.confirm(
+      "This will populate your website with sample content. You can edit all content later. Continue?",
+    );
+    if (!confirmed) return;
+
+    setPopulating(true);
+    try {
+      await populateDefaultContent(websiteId);
+      setHasEmptyContent(false);
+      alert(
+        "Sample content added successfully! You can now view and edit your website.",
+      );
+      // Reload website data
+      await loadData();
+    } catch (error: any) {
+      alert(`Error: ${error.message}`);
+    } finally {
+      setPopulating(false);
     }
   };
 
@@ -245,6 +285,43 @@ export const WebsiteEditor: React.FC = () => {
         </h1>
         <p className="text-gray-600 mt-1">Edit website settings and theme</p>
       </div>
+
+      {/* Empty Content Warning */}
+      {hasEmptyContent && (
+        <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-6">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-amber-100 rounded-lg">
+              <Wand2 size={24} className="text-amber-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-amber-800 mb-1">
+                Your website needs content
+              </h3>
+              <p className="text-sm text-amber-700 mb-4">
+                This website doesn't have any section content yet. Click the
+                button below to add sample content that you can customize later.
+              </p>
+              <button
+                onClick={handlePopulateContent}
+                disabled={populating}
+                className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-medium disabled:opacity-50"
+              >
+                {populating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Adding content...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 size={18} />
+                    Add Sample Content
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Settings Form */}
       <div className="max-w-2xl space-y-6">
