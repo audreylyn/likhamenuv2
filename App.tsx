@@ -100,9 +100,13 @@ const RootRoute: React.FC = () => {
     hostname === "localhost" || hostname.startsWith("127.0.0.1");
   const hasSubdomain = !isLocalhost && isValidSubdomain(hostname);
 
-  // If we have a valid subdomain or website param, show public site immediately
+  // If we have a valid subdomain or website param, show public site with WebsiteProvider
   if (hasSubdomain || hasWebsiteParam) {
-    return <PublicSite />;
+    return (
+      <WebsiteProvider>
+        <PublicSite />
+      </WebsiteProvider>
+    );
   }
 
   // Otherwise show login page (for main domain, deployment domains, or localhost)
