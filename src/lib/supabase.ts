@@ -22,6 +22,18 @@ export const supabase = createClient<Database>(
     auth: {
       persistSession: true,
       autoRefreshToken: true,
+      detectSessionInUrl: false, // Disable URL session detection for faster load
+      flowType: "implicit", // Use implicit flow for faster auth
+    },
+    global: {
+      // Optimize fetch for faster requests
+      fetch: (url, options) => {
+        return fetch(url, {
+          ...options,
+          // Don't include credentials for public API calls
+          credentials: "same-origin",
+        });
+      },
     },
   },
 );
