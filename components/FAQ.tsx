@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, HelpCircle, Plus, X } from 'lucide-react';
-import { supabase, getWebsiteId } from '../src/lib/supabase';
 import type { FAQ as FAQType, FAQConfig } from '../src/types/database.types';
 import { EditableText } from '../src/components/editor/EditableText';
 import { useEditor } from '../src/contexts/EditorContext';
+import { useWebsite } from '../src/contexts/WebsiteContext';
 
 export const FAQ: React.FC = () => {
   const [config, setConfig] = useState<FAQConfig | null>(null);
@@ -12,41 +12,25 @@ export const FAQ: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const { isEditing, saveField } = useEditor();
+  const { websiteData, loading: websiteLoading } = useWebsite();
 
   useEffect(() => {
-    fetchFAQData();
-  }, []);
+    if (!websiteLoading && websiteData?.content?.faq) {
+      const faqContent = websiteData.content.faq;
 
-  const fetchFAQData = async () => {
-    try {
-      const websiteId = await getWebsiteId();
-      if (!websiteId) return;
+      if (faqContent.config) {
+        setConfig(faqContent.config as FAQConfig);
+      }
 
-      // Fetch config
-      const { data: configData, error: configError } = await supabase
-        .from('faq_config')
-        .select('*')
-        .eq('website_id', websiteId)
-        .single();
+      if (faqContent.items) {
+        setFaqs(faqContent.items as FAQType[]);
+      }
 
-      if (configError) throw configError;
-      setConfig(configData as FAQConfig);
-
-      // Fetch FAQs
-      const { data: faqsData, error: faqsError } = await supabase
-        .from('faqs')
-        .select('*')
-        .eq('website_id', websiteId)
-        .order('display_order');
-
-      if (faqsError) throw faqsError;
-      setFaqs(faqsData as FAQType[]);
-    } catch (error) {
-      console.error('Error fetching FAQ data:', error);
-    } finally {
+      setLoading(false);
+    } else if (!websiteLoading) {
       setLoading(false);
     }
-  };
+  }, [websiteData, websiteLoading]);
 
   const toggleFAQ = (index: number) => {
     setOpenIndex(openIndex === index ? null : index);
@@ -63,7 +47,7 @@ export const FAQ: React.FC = () => {
     );
   }
 
-  if (!config || faqs.length === 0) return null;
+  if (!config) return null;
 
   return (
     <section id="faq" className="py-20 bg-white">
@@ -76,8 +60,9 @@ export const FAQ: React.FC = () => {
             <EditableText
               value={config.heading}
               onSave={async (newValue) => {
-                await saveField('faq_config', 'heading', newValue, config.id);
-                setConfig({ ...config, heading: newValue });
+                const newConfig = { ...config, heading: newValue };
+                await saveField('faq', 'config', newConfig);
+                setConfig(newConfig);
               }}
               tag="h2"
               className="font-serif text-3xl md:text-4xl font-bold text-bakery-dark"
@@ -92,8 +77,9 @@ export const FAQ: React.FC = () => {
               <EditableText
                 value={config.subheading}
                 onSave={async (newValue) => {
-                  await saveField('faq_config', 'subheading', newValue, config.id);
-                  setConfig({ ...config, subheading: newValue });
+                  const newConfig = { ...config, subheading: newValue };
+                  await saveField('faq', 'config', newConfig);
+                  setConfig(newConfig);
                 }}
                 tag="p"
                 multiline
@@ -111,15 +97,9 @@ export const FAQ: React.FC = () => {
             const handleDeleteFAQ = async () => {
               if (window.confirm('Are you sure you want to delete this FAQ?')) {
                 try {
-                  const { error } = await supabase
-                    .from('faqs')
-                    .delete()
-                    .eq('id', faq.id);
-                  
-                  if (error) throw error;
-                  
-                  // Remove from local state
-                  setFaqs(faqs.filter(f => f.id !== faq.id));
+                  const newFaqs = faqs.filter(f => f.id !== faq.id);
+                  await saveField('faq', 'items', newFaqs);
+                  setFaqs(newFaqs);
                 } catch (error) {
                   console.error('Error deleting FAQ:', error);
                   alert('Failed to delete FAQ. Please try again.');
@@ -128,8 +108,8 @@ export const FAQ: React.FC = () => {
             };
 
             return (
-              <div 
-                key={faq.id || index} 
+              <div
+                key={faq.id || index}
                 className="border border-bakery-sand/30 rounded-xl overflow-hidden bg-bakery-cream/20 relative"
               >
                 {isEditing && (
@@ -141,97 +121,90 @@ export const FAQ: React.FC = () => {
                     <X size={16} />
                   </button>
                 )}
-              <button
-                onClick={() => !isEditing && toggleFAQ(index)}
-                className="w-full flex items-center justify-between p-5 text-left focus:outline-none hover:bg-bakery-cream/50 transition-colors"
-              >
-                {isEditing ? (
-                  <EditableText
-                    value={faq.question}
-                    onSave={async (newValue) => {
-                      await saveField('faqs', 'question', newValue, faq.id);
-                      setFaqs(faqs.map(f => f.id === faq.id ? { ...f, question: newValue } : f));
-                    }}
-                    tag="span"
-                    className="font-serif font-bold text-lg text-bakery-dark"
-                  />
-                ) : (
-                  <span className="font-serif font-bold text-lg text-bakery-dark">
-                    {faq.question}
-                  </span>
-                )}
-                {!isEditing && (
-                  <motion.div
-                    animate={{ rotate: openIndex === index ? 180 : 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="text-bakery-primary"
-                  >
-                    <ChevronDown size={20} />
-                  </motion.div>
-                )}
-              </button>
+                <button
+                  onClick={() => !isEditing && toggleFAQ(index)}
+                  className="w-full flex items-center justify-between p-5 text-left focus:outline-none hover:bg-bakery-cream/50 transition-colors"
+                >
+                  {isEditing ? (
+                    <EditableText
+                      value={faq.question}
+                      onSave={async (newValue) => {
+                        const newFaqs = faqs.map(f => f.id === faq.id ? { ...f, question: newValue } : f);
+                        await saveField('faq', 'items', newFaqs);
+                        setFaqs(newFaqs);
+                      }}
+                      tag="span"
+                      className="font-serif font-bold text-lg text-bakery-dark"
+                    />
+                  ) : (
+                    <span className="font-serif font-bold text-lg text-bakery-dark">
+                      {faq.question}
+                    </span>
+                  )}
+                  {!isEditing && (
+                    <motion.div
+                      animate={{ rotate: openIndex === index ? 180 : 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="text-bakery-primary"
+                    >
+                      <ChevronDown size={20} />
+                    </motion.div>
+                  )}
+                </button>
 
-              <AnimatePresence>
-                {(openIndex === index || isEditing) && (
-                  <motion.div
-                    initial={isEditing ? false : { height: 0, opacity: 0 }}
-                    animate={isEditing ? {} : { height: "auto", opacity: 1 }}
-                    exit={isEditing ? false : { height: 0, opacity: 0 }}
-                    transition={{ duration: 0.3, ease: "easeInOut" }}
-                  >
-                    <div className="p-5 pt-0 text-gray-600 font-sans leading-relaxed border-t border-bakery-sand/20">
-                      {isEditing ? (
-                        <EditableText
-                          value={faq.answer}
-                          onSave={async (newValue) => {
-                            await saveField('faqs', 'answer', newValue, faq.id);
-                            setFaqs(faqs.map(f => f.id === faq.id ? { ...f, answer: newValue } : f));
-                          }}
-                          tag="p"
-                          multiline
-                          className="text-gray-600 font-sans leading-relaxed"
-                        />
-                      ) : (
-                        faq.answer
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                <AnimatePresence>
+                  {(openIndex === index || isEditing) && (
+                    <motion.div
+                      initial={isEditing ? {} : { height: 0, opacity: 0 }}
+                      animate={isEditing ? {} : { height: "auto", opacity: 1 }}
+                      exit={isEditing ? {} : { height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                    >
+                      <div className="p-5 pt-0 text-gray-600 font-sans leading-relaxed border-t border-bakery-sand/20">
+                        {isEditing ? (
+                          <EditableText
+                            value={faq.answer}
+                            onSave={async (newValue) => {
+                              const newFaqs = faqs.map(f => f.id === faq.id ? { ...f, answer: newValue } : f);
+                              await saveField('faq', 'items', newFaqs);
+                              setFaqs(newFaqs);
+                            }}
+                            tag="p"
+                            multiline
+                            className="text-gray-600 font-sans leading-relaxed"
+                          />
+                        ) : (
+                          faq.answer
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             );
           })}
           {isEditing && (
             <button
               onClick={async () => {
                 try {
-                  const websiteId = await getWebsiteId();
-                  if (!websiteId) {
-                    alert('No website ID found. Please refresh the page.');
-                    return;
-                  }
-
-                  // Get the highest display_order
-                  const maxOrder = faqs.length > 0 
+                  const maxOrder = faqs.length > 0
                     ? Math.max(...faqs.map(f => f.display_order || 0))
                     : -1;
 
-                  // Insert new FAQ
-                  const { data: newFAQ, error } = await supabase
-                    .from('faqs')
-                    .insert({
-                      website_id: websiteId,
-                      question: 'New Question',
-                      answer: 'New Answer',
-                      display_order: maxOrder + 1
-                    })
-                    .select()
-                    .single();
+                  const newFAQ: FAQType = {
+                    id: crypto.randomUUID(),
+                    website_id: '',
+                    question: 'New Question',
+                    answer: 'New Answer',
+                    display_order: maxOrder + 1,
+                    is_featured: false,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                  };
 
-                  if (error) throw error;
-
-                  // Add to local state
-                  setFaqs([...faqs, newFAQ as FAQType]);
+                  const newFaqs = [...faqs, newFAQ];
+                  await saveField('faq', 'items', newFaqs);
+                  setFaqs(newFaqs);
                 } catch (error) {
                   console.error('Error adding FAQ:', error);
                   alert('Failed to add FAQ. Please try again.');

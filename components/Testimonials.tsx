@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Star, Quote, ChevronLeft, ChevronRight, X, Plus, Image as ImageIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { supabase, getWebsiteId } from '../src/lib/supabase';
 import type { Testimonial, TestimonialsConfig } from '../src/types/database.types';
 import { EditableText } from '../src/components/editor/EditableText';
 import { useEditor } from '../src/contexts/EditorContext';
@@ -14,42 +13,22 @@ export const Testimonials: React.FC = () => {
   const [index, setIndex] = useState(0);
   const [visibleCards, setVisibleCards] = useState(3);
   const { isEditing, saveField } = useEditor();
-  const { contentVersion } = useWebsite();
+  const { websiteData, loading: websiteLoading } = useWebsite();
 
   useEffect(() => {
-    fetchTestimonialsData();
-  }, [contentVersion]); // Refetch when content version changes
-
-  const fetchTestimonialsData = async () => {
-    try {
-      const websiteId = await getWebsiteId();
-      if (!websiteId) return;
-
-      // Fetch both in parallel (faster!)
-      const [configResult, testimonialsResult] = await Promise.all([
-        supabase
-          .from('testimonials_config')
-          .select('*')
-          .eq('website_id', websiteId)
-          .single(),
-        supabase
-          .from('testimonials')
-          .select('*')
-          .eq('website_id', websiteId)
-          .order('display_order')
-      ]);
-
-      if (configResult.error) throw configResult.error;
-      setConfig(configResult.data as TestimonialsConfig);
-
-      if (testimonialsResult.error) throw testimonialsResult.error;
-      setTestimonials(testimonialsResult.data as Testimonial[]);
-    } catch (error) {
-      console.error('Error fetching testimonials data:', error);
-    } finally {
+    if (!websiteLoading && websiteData?.content?.testimonials) {
+      const testimonialsContent = websiteData.content.testimonials;
+      if (testimonialsContent.config) {
+        setConfig(testimonialsContent.config as TestimonialsConfig);
+      }
+      if (testimonialsContent.items) {
+        setTestimonials(testimonialsContent.items as Testimonial[]);
+      }
+      setLoading(false);
+    } else if (!websiteLoading) {
       setLoading(false);
     }
-  };
+  }, [websiteData, websiteLoading]);
 
   // Handle responsive visible cards
   useEffect(() => {
@@ -89,15 +68,9 @@ export const Testimonials: React.FC = () => {
   const handleDeleteTestimonial = async (testimonialId: string) => {
     if (window.confirm('Are you sure you want to delete this testimonial?')) {
       try {
-        const { error } = await supabase
-          .from('testimonials')
-          .delete()
-          .eq('id', testimonialId);
-        
-        if (error) throw error;
-        
-        // Remove from local state
-        setTestimonials(testimonials.filter(t => t.id !== testimonialId));
+        const newTestimonials = testimonials.filter(t => t.id !== testimonialId);
+        await saveField('testimonials', 'items', newTestimonials);
+        setTestimonials(newTestimonials);
       } catch (error) {
         console.error('Error deleting testimonial:', error);
         alert('Failed to delete testimonial. Please try again.');
@@ -110,10 +83,11 @@ export const Testimonials: React.FC = () => {
     if (newImageUrl === null) return; // User cancelled
 
     try {
-      await saveField('testimonials', 'customer_image_url', newImageUrl, testimonialId);
-      setTestimonials(testimonials.map(t => 
+      const newTestimonials = testimonials.map(t =>
         t.id === testimonialId ? { ...t, customer_image_url: newImageUrl } : t
-      ));
+      );
+      await saveField('testimonials', 'items', newTestimonials);
+      setTestimonials(newTestimonials);
     } catch (error) {
       console.error('Error updating image:', error);
       alert('Failed to save image. Please try again.');
@@ -122,36 +96,27 @@ export const Testimonials: React.FC = () => {
 
   const handleAddTestimonial = async () => {
     try {
-      const websiteId = await getWebsiteId();
-      if (!websiteId) {
-        alert('No website ID found. Please refresh the page.');
-        return;
-      }
-
       // Get the highest display_order
-      const maxOrder = testimonials.length > 0 
+      const maxOrder = testimonials.length > 0
         ? Math.max(...testimonials.map(t => t.display_order || 0))
         : -1;
 
-      // Insert new testimonial
-      const { data: newTestimonial, error } = await supabase
-        .from('testimonials')
-        .insert({
-          website_id: websiteId,
-          customer_name: 'New Customer',
-          customer_role: 'Customer',
-          testimonial_text: 'Great service and amazing products!',
-          rating: 5,
-          is_featured: false,
-          display_order: maxOrder + 1
-        } as any)
-        .select()
-        .single();
+      const newTestimonial: Testimonial = {
+        id: crypto.randomUUID(),
+        website_id: '',
+        customer_name: 'New Customer',
+        customer_role: 'Customer',
+        testimonial_text: 'Great service and amazing products!',
+        rating: 5,
+        is_featured: false,
+        display_order: maxOrder + 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
 
-      if (error) throw error;
-
-      // Add to local state
-      setTestimonials([...testimonials, newTestimonial as Testimonial]);
+      const newTestimonials = [...testimonials, newTestimonial];
+      await saveField('testimonials', 'items', newTestimonials);
+      setTestimonials(newTestimonials);
     } catch (error) {
       console.error('Error adding testimonial:', error);
       alert('Failed to add testimonial. Please try again.');
@@ -169,21 +134,22 @@ export const Testimonials: React.FC = () => {
     );
   }
 
-  if (!config || testimonials.length === 0) return null;
+  if (!config) return null;
 
   return (
     <section id="testimonials" className="py-24 bg-bakery-dark text-bakery-beige relative overflow-hidden">
       {/* Decorative subtle overlay */}
       <div className="absolute inset-0 bg-black/10 pointer-events-none" />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="text-center mb-16">
           {isEditing ? (
             <EditableText
               value={config.heading}
               onSave={async (newValue) => {
-                await saveField('testimonials_config', 'heading', newValue, config.id);
-                setConfig({ ...config, heading: newValue });
+                const newConfig = { ...config, heading: newValue };
+                await saveField('testimonials', 'config', newConfig);
+                setConfig(newConfig);
               }}
               tag="h2"
               className="font-serif text-4xl md:text-5xl font-bold text-white mb-4"
@@ -199,8 +165,9 @@ export const Testimonials: React.FC = () => {
               <EditableText
                 value={config.subheading}
                 onSave={async (newValue) => {
-                  await saveField('testimonials_config', 'subheading', newValue, config.id);
-                  setConfig({ ...config, subheading: newValue });
+                  const newConfig = { ...config, subheading: newValue };
+                  await saveField('testimonials', 'config', newConfig);
+                  setConfig(newConfig);
                 }}
                 tag="p"
                 multiline
@@ -217,15 +184,15 @@ export const Testimonials: React.FC = () => {
         {/* Carousel Container */}
         <div className="relative group">
           <div className={shouldShowSwiper ? "overflow-hidden" : ""}>
-            <motion.div 
+            <motion.div
               className="flex"
               initial={false}
               animate={shouldShowSwiper ? { x: `-${index * (100 / visibleCards)}%` } : { x: 0 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
               {testimonials.map((testimonial) => (
-                <div 
-                  key={testimonial.id} 
+                <div
+                  key={testimonial.id}
                   className="flex-shrink-0 px-4"
                   style={{ width: shouldShowSwiper ? `${100 / visibleCards}%` : `${100 / Math.min(testimonials.length, 3)}%` }}
                 >
@@ -240,7 +207,7 @@ export const Testimonials: React.FC = () => {
                       </button>
                     )}
                     <Quote className="absolute top-6 right-6 text-bakery-accent opacity-60" size={48} />
-                    
+
                     {config.show_ratings && testimonial.rating && (
                       <div className="flex gap-1 mb-6 text-bakery-accent">
                         {[...Array(testimonial.rating)].map((_, i) => (
@@ -253,8 +220,9 @@ export const Testimonials: React.FC = () => {
                       <EditableText
                         value={testimonial.testimonial_text}
                         onSave={async (newValue) => {
-                          await saveField('testimonials', 'testimonial_text', newValue, testimonial.id);
-                          setTestimonials(testimonials.map(t => t.id === testimonial.id ? { ...t, testimonial_text: newValue } : t));
+                          const newTestimonials = testimonials.map(t => t.id === testimonial.id ? { ...t, testimonial_text: newValue } : t);
+                          await saveField('testimonials', 'items', newTestimonials);
+                          setTestimonials(newTestimonials);
                         }}
                         tag="p"
                         multiline
@@ -268,9 +236,9 @@ export const Testimonials: React.FC = () => {
 
                     <div className="flex items-center gap-4 mt-auto">
                       <div className="relative">
-                        <img 
-                          src={testimonial.customer_image_url || `https://i.pravatar.cc/150?u=${testimonial.id}`} 
-                          alt={testimonial.customer_name} 
+                        <img
+                          src={testimonial.customer_image_url || `https://i.pravatar.cc/150?u=${testimonial.id}`}
+                          alt={testimonial.customer_name}
                           className="w-12 h-12 rounded-full object-cover border-2 border-bakery-primary"
                         />
                         {isEditing && (
@@ -288,8 +256,9 @@ export const Testimonials: React.FC = () => {
                           <EditableText
                             value={testimonial.customer_name}
                             onSave={async (newValue) => {
-                              await saveField('testimonials', 'customer_name', newValue, testimonial.id);
-                              setTestimonials(testimonials.map(t => t.id === testimonial.id ? { ...t, customer_name: newValue } : t));
+                              const newTestimonials = testimonials.map(t => t.id === testimonial.id ? { ...t, customer_name: newValue } : t);
+                              await saveField('testimonials', 'items', newTestimonials);
+                              setTestimonials(newTestimonials);
                             }}
                             tag="h4"
                             className="font-bold font-sans text-white"
@@ -302,8 +271,9 @@ export const Testimonials: React.FC = () => {
                             <EditableText
                               value={testimonial.customer_role}
                               onSave={async (newValue) => {
-                                await saveField('testimonials', 'customer_role', newValue, testimonial.id);
-                                setTestimonials(testimonials.map(t => t.id === testimonial.id ? { ...t, customer_role: newValue } : t));
+                                const newTestimonials = testimonials.map(t => t.id === testimonial.id ? { ...t, customer_role: newValue } : t);
+                                await saveField('testimonials', 'items', newTestimonials);
+                                setTestimonials(newTestimonials);
                               }}
                               tag="p"
                               className="text-sm text-bakery-sand"
@@ -323,7 +293,7 @@ export const Testimonials: React.FC = () => {
           {/* Controls - Only show if more than 3 testimonials */}
           {!isEditing && shouldShowSwiper && (
             <>
-              <button 
+              <button
                 onClick={prevSlide}
                 disabled={index === 0}
                 className={`absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 md:-translate-x-12 bg-white/10 hover:bg-white/20 text-white p-3 rounded-full backdrop-blur-md transition-all disabled:opacity-30 disabled:cursor-not-allowed z-20 ${index === 0 ? 'hidden' : 'block'}`}
@@ -331,8 +301,8 @@ export const Testimonials: React.FC = () => {
               >
                 <ChevronLeft size={24} />
               </button>
-              
-              <button 
+
+              <button
                 onClick={nextSlide}
                 disabled={index === maxIndex}
                 className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 md:translate-x-12 bg-white/10 hover:bg-white/20 text-white p-3 rounded-full backdrop-blur-md transition-all disabled:opacity-30 disabled:cursor-not-allowed z-20 ${index === maxIndex ? 'hidden' : 'block'}`}
@@ -351,9 +321,8 @@ export const Testimonials: React.FC = () => {
               <button
                 key={idx}
                 onClick={() => setIndex(idx)}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  index === idx ? 'w-8 bg-bakery-accent' : 'w-2 bg-white/30 hover:bg-white/50'
-                }`}
+                className={`h-2 rounded-full transition-all duration-300 ${index === idx ? 'w-8 bg-bakery-accent' : 'w-2 bg-white/30 hover:bg-white/50'
+                  }`}
                 aria-label={`Go to slide ${idx + 1}`}
               />
             ))}

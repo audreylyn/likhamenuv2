@@ -3,45 +3,46 @@
  * Sidebar navigation for admin dashboard
  */
 
-import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
-import { 
-  LayoutDashboard, 
-  Globe, 
-  Settings as SettingsIcon, 
+import React from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
+import {
+  LayoutDashboard,
+  Globe,
+  Settings as SettingsIcon,
   LogOut,
   User,
-  Layers
-} from 'lucide-react';
+  Layers,
+} from "lucide-react";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
 export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
-  React.useEffect(() => {
-    document.title = 'Admin Dashboard - LikhaSiteWorks';
-  }, []);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    document.title = "Admin Dashboard - LikhaSiteWorks";
+  }, []);
 
   const handleSignOut = async () => {
     try {
       await signOut();
-      navigate('/login');
+      navigate("/login");
     } catch (error: any) {
-      console.error('Error signing out:', error);
+      console.error("Error signing out:", error);
       // Even if signOut fails, navigate to login
-      navigate('/login');
+      navigate("/login");
     }
   };
 
   const navItems = [
-    { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-    { to: '/admin/websites', icon: Globe, label: 'Websites' },
-    { to: '/admin/sections', icon: Layers, label: 'Sections' },
-    { to: '/admin/settings', icon: SettingsIcon, label: 'Settings' },
+    { to: "/admin", icon: LayoutDashboard, label: "Dashboard", exact: true },
+    { to: "/admin/websites", icon: Globe, label: "Websites" },
+    { to: "/admin/sections", icon: Layers, label: "Sections" },
+    { to: "/admin/settings", icon: SettingsIcon, label: "Settings" },
   ];
 
   return (
@@ -64,8 +65,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-lg transition ${
                   isActive
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-300 hover:bg-gray-800'
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-300 hover:bg-gray-800"
                 }`
               }
             >
@@ -80,13 +81,19 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center">
               {user?.avatar_url ? (
-                <img src={user.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                <img
+                  src={user.avatar_url}
+                  alt=""
+                  className="w-full h-full rounded-full object-cover"
+                />
               ) : (
                 <User size={20} />
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.full_name || user?.email}</p>
+              <p className="text-sm font-medium truncate">
+                {user?.full_name || user?.email}
+              </p>
               <p className="text-xs text-gray-400 capitalize">{user?.role}</p>
             </div>
           </div>
@@ -102,10 +109,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        {children}
-      </main>
+      <main className="flex-1 overflow-auto">{children}</main>
     </div>
   );
 };
-

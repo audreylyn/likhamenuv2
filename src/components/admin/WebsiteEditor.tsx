@@ -1,13 +1,77 @@
 /**
  * Website Editor
- * Edit specific website settings and theme
+ * Edit specific website settings, theme, and chat config
+ * Uses JSONB structure - all data in websites table
  */
 
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
-import { ArrowLeft, Save, Palette, MessageCircle } from 'lucide-react';
-import type { ThemePreset } from '../../types/auth.types';
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { supabase } from "../../lib/supabase";
+import { ArrowLeft, Save, Palette, MessageCircle, Globe } from "lucide-react";
+
+// Default theme colors
+const DEFAULT_THEMES = [
+  {
+    id: "warm-bakery",
+    name: "Warm Bakery",
+    description: "Warm browns and golden tones",
+    colors: {
+      primary: "#8B4513",
+      secondary: "#D2691E",
+      accent: "#FFD700",
+      background: "#FFF8DC",
+      text: "#2C1810",
+    },
+  },
+  {
+    id: "modern-minimal",
+    name: "Modern Minimal",
+    description: "Clean black and white",
+    colors: {
+      primary: "#1a1a1a",
+      secondary: "#4a4a4a",
+      accent: "#007bff",
+      background: "#ffffff",
+      text: "#1a1a1a",
+    },
+  },
+  {
+    id: "fresh-green",
+    name: "Fresh & Green",
+    description: "Natural green tones",
+    colors: {
+      primary: "#2E8B57",
+      secondary: "#3CB371",
+      accent: "#90EE90",
+      background: "#F0FFF0",
+      text: "#1C4428",
+    },
+  },
+  {
+    id: "ocean-blue",
+    name: "Ocean Blue",
+    description: "Cool blue vibes",
+    colors: {
+      primary: "#1E90FF",
+      secondary: "#4169E1",
+      accent: "#00CED1",
+      background: "#F0F8FF",
+      text: "#191970",
+    },
+  },
+  {
+    id: "sunset-warm",
+    name: "Sunset Warm",
+    description: "Warm sunset colors",
+    colors: {
+      primary: "#FF6B6B",
+      secondary: "#FFA07A",
+      accent: "#FFD93D",
+      background: "#FFF5EE",
+      text: "#8B0000",
+    },
+  },
+];
 
 export const WebsiteEditor: React.FC = () => {
   const { websiteId } = useParams();
@@ -15,17 +79,23 @@ export const WebsiteEditor: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [website, setWebsite] = useState<any>(null);
-  const [themePresets, setThemePresets] = useState<ThemePreset[]>([]);
-  const [contactInfo, setContactInfo] = useState<any>(null);
-  const [facebookMessengerId, setFacebookMessengerId] = useState('');
+
+  // Form state
+  const [title, setTitle] = useState("");
+  const [subdomain, setSubdomain] = useState("");
+  const [selectedTheme, setSelectedTheme] = useState("warm-bakery");
   const [chatSupportEnabled, setChatSupportEnabled] = useState(false);
-  const [chatSupportConfig, setChatSupportConfig] = useState<any>(null);
-  const [greetingMessage, setGreetingMessage] = useState('Hi! How can we help you today?');
-  const [chatbotConfigJson, setChatbotConfigJson] = useState('{"model": "gemini-2.5-flash", "temperature": 0.7}');
-  const [knowledgeBaseSheetsUrl, setKnowledgeBaseSheetsUrl] = useState('');
-  
+  const [greetingMessage, setGreetingMessage] = useState(
+    "Hi! How can we help you today?",
+  );
+  const [chatbotConfigJson, setChatbotConfigJson] = useState(
+    '{"model": "gemini-2.5-flash", "temperature": 0.7}',
+  );
+  const [knowledgeBaseSheetsUrl, setKnowledgeBaseSheetsUrl] = useState("");
+  const [messengerPageId, setMessengerPageId] = useState("");
+
   // Get domain from environment variable or use default
-  const domain = import.meta.env.VITE_DOMAIN || 'likhasiteworks.studio';
+  const domain = import.meta.env.VITE_DOMAIN || "likhasiteworks.studio";
 
   useEffect(() => {
     loadData();
@@ -33,82 +103,49 @@ export const WebsiteEditor: React.FC = () => {
 
   const loadData = async () => {
     try {
-      // Load website
+      // Load website data (all from JSONB columns)
       const { data: websiteData, error: websiteError } = await supabase
-        .from('websites')
-        .select('*')
-        .eq('id', websiteId)
+        .from("websites")
+        .select("*")
+        .eq("id", websiteId)
         .single();
 
       if (websiteError) throw websiteError;
       setWebsite(websiteData);
 
-      // Load theme presets
-      const { data: themesData, error: themesError } = await supabase
-        .from('theme_presets')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order');
+      // Populate form from website data
+      setTitle(websiteData.title || "");
+      setSubdomain(websiteData.subdomain || "");
 
-      if (themesError) throw themesError;
-      setThemePresets(themesData || []);
+      // Theme from theme JSONB
+      const theme = websiteData.theme || {};
+      setSelectedTheme(theme.preset || "warm-bakery");
 
-      // Load contact info for Facebook Messenger ID
-      const { data: contactData, error: contactError } = await supabase
-        .from('contact_info')
-        .select('*')
-        .eq('website_id', websiteId)
-        .single();
+      // Chat support from content.chatSupport JSONB
+      const content = websiteData.content || {};
+      const chatSupport = content.chatSupport || {};
+      setChatSupportEnabled(chatSupport.enabled || false);
+      setGreetingMessage(
+        chatSupport.greeting_message || "Hi! How can we help you today?",
+      );
+      setChatbotConfigJson(
+        JSON.stringify(
+          chatSupport.config || { model: "gemini-2.5-flash", temperature: 0.7 },
+          null,
+          2,
+        ),
+      );
+      setKnowledgeBaseSheetsUrl(
+        chatSupport.knowledge_base_url ||
+          import.meta.env.VITE_GOOGLE_SHEETS_KB_URL ||
+          "",
+      );
 
-      if (!contactError && contactData) {
-        setContactInfo(contactData);
-        // Get Facebook Messenger ID from contact_info
-        // It can be stored in facebook_messenger_id field or in social_links.facebook
-        setFacebookMessengerId(contactData.facebook_messenger_id || contactData.social_links?.facebook_messenger || '');
-      }
-
-      // Load chat support config
-      const { data: chatData, error: chatError } = await supabase
-        .from('chat_support_config')
-        .select('*')
-        .eq('website_id', websiteId)
-        .single();
-
-      if (!chatError && chatData) {
-        setChatSupportConfig(chatData);
-        setChatSupportEnabled(chatData.is_enabled || false);
-        setGreetingMessage(chatData.greeting_message || 'Hi! How can we help you today?');
-        // Use default config if empty
-        const defaultConfig = { model: "gemini-2.5-flash", temperature: 0.7 };
-        setChatbotConfigJson(JSON.stringify(chatData.chatbot_config || defaultConfig, null, 2));
-        // Knowledge base from Google Sheets (can be from database or env var)
-        const kbUrl = chatData.knowledge_base || import.meta.env.VITE_GOOGLE_SHEETS_KB_URL || '';
-        if (kbUrl && (kbUrl.startsWith('http://') || kbUrl.startsWith('https://'))) {
-          setKnowledgeBaseSheetsUrl(kbUrl);
-        } else {
-          setKnowledgeBaseSheetsUrl('');
-        }
-      } else if (chatError && chatError.code === 'PGRST116') {
-        // Chat support config doesn't exist, create default (disabled)
-        const { data: newChatData, error: createError } = await supabase
-          .from('chat_support_config')
-          .insert({
-            website_id: websiteId,
-            is_enabled: false,
-            greeting_message: 'Hi! How can we help you today?',
-            agent_name: 'Support',
-            position: 'bottom-right',
-          })
-          .select()
-          .single();
-
-        if (!createError && newChatData) {
-          setChatSupportConfig(newChatData);
-          setChatSupportEnabled(false);
-        }
-      }
+      // Messenger from messenger JSONB
+      const messenger = websiteData.messenger || {};
+      setMessengerPageId(messenger.page_id || "");
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error("Error loading data:", error);
     } finally {
       setLoading(false);
     }
@@ -117,103 +154,55 @@ export const WebsiteEditor: React.FC = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Update website
+      // Parse chatbot config
+      let chatbotConfig = { model: "gemini-2.5-flash", temperature: 0.7 };
+      try {
+        chatbotConfig = JSON.parse(chatbotConfigJson);
+      } catch (e) {
+        console.warn("Invalid chatbot config JSON, using defaults");
+      }
+
+      // Get current content and update chatSupport
+      const currentContent = website?.content || {};
+      const updatedContent = {
+        ...currentContent,
+        chatSupport: {
+          enabled: chatSupportEnabled,
+          greeting_message: greetingMessage,
+          config: chatbotConfig,
+          knowledge_base_url: knowledgeBaseSheetsUrl || null,
+        },
+      };
+
+      // Get selected theme colors
+      const themePreset =
+        DEFAULT_THEMES.find((t) => t.id === selectedTheme) || DEFAULT_THEMES[0];
+      const updatedTheme = {
+        preset: selectedTheme,
+        colors: themePreset.colors,
+      };
+
+      // Update messenger config
+      const updatedMessenger = {
+        page_id: messengerPageId || null,
+      };
+
+      // Update website with all JSONB data
       const { error: websiteError } = await supabase
-        .from('websites')
+        .from("websites")
         .update({
-          site_title: website.site_title,
-          subdomain: website.subdomain,
-          theme_preset_id: website.theme_preset_id,
+          title: title,
+          subdomain: subdomain,
+          theme: updatedTheme,
+          content: updatedContent,
+          messenger: updatedMessenger,
+          updatedat: new Date().toISOString(),
         })
-        .eq('id', websiteId);
+        .eq("id", websiteId);
 
       if (websiteError) throw websiteError;
 
-      // Update or create contact_info with Facebook Messenger ID
-      if (contactInfo) {
-        // Update existing contact_info
-        const socialLinks = contactInfo.social_links || {};
-        const { error: contactError } = await supabase
-          .from('contact_info')
-          .update({
-            facebook_messenger_id: facebookMessengerId || null,
-            social_links: {
-              ...socialLinks,
-              facebook_messenger: facebookMessengerId || '',
-            },
-          })
-          .eq('id', contactInfo.id);
-
-        if (contactError) throw contactError;
-      } else if (websiteId) {
-        // Create new contact_info if it doesn't exist
-        const { error: contactError } = await supabase
-          .from('contact_info')
-          .insert({
-            website_id: websiteId,
-            heading: 'Get in Touch',
-            facebook_messenger_id: facebookMessengerId || null,
-            social_links: {
-              facebook: '',
-              instagram: '',
-              twitter: '',
-              facebook_messenger: facebookMessengerId || '',
-            },
-          });
-
-        if (contactError) throw contactError;
-      }
-
-      // Update chat support config with chatbot settings
-      const defaultConfig = { model: "gemini-2.5-flash", temperature: 0.7 };
-      let chatbotConfig = defaultConfig;
-      try {
-        const parsed = JSON.parse(chatbotConfigJson);
-        // Use parsed config if valid, otherwise use defaults
-        chatbotConfig = Object.keys(parsed).length > 0 ? parsed : defaultConfig;
-      } catch (e) {
-        console.warn('Invalid chatbot config JSON, using defaults');
-        chatbotConfig = defaultConfig;
-      }
-
-      if (chatSupportConfig && websiteId) {
-        const { error: chatError } = await supabase
-          .from('chat_support_config')
-          .update({
-            is_enabled: chatSupportEnabled,
-            greeting_message: greetingMessage,
-            chatbot_provider: 'gemini', // Always use Gemini
-            chatbot_api_key: null, // Uses env var, not stored per-website
-            chatbot_bot_id: null, // Not needed for Gemini
-            chatbot_webhook_url: null, // Not needed for Gemini
-            chatbot_config: chatbotConfig,
-            knowledge_base: knowledgeBaseSheetsUrl || null, // Store Google Sheets URL
-          })
-          .eq('id', chatSupportConfig.id);
-
-        if (chatError) throw chatError;
-      } else if (websiteId && !chatSupportConfig) {
-        // Create chat support config if it doesn't exist
-        const { error: chatError } = await supabase
-          .from('chat_support_config')
-          .insert({
-            website_id: websiteId,
-            is_enabled: chatSupportEnabled,
-            greeting_message: greetingMessage,
-            agent_name: 'Support',
-            position: 'bottom-right',
-            chatbot_provider: 'gemini', // Always use Gemini
-            chatbot_api_key: null, // Uses env var, not stored per-website
-            chatbot_bot_id: null, // Not needed for Gemini
-            chatbot_webhook_url: null, // Not needed for Gemini
-            chatbot_config: chatbotConfig,
-            knowledge_base: knowledgeBaseSheetsUrl || null, // Store Google Sheets URL
-          });
-
-        if (chatError) throw chatError;
-      }
-
-      alert('Website updated successfully!');
+      alert("Website updated successfully!");
     } catch (error: any) {
       alert(`Error: ${error.message}`);
     } finally {
@@ -245,13 +234,15 @@ export const WebsiteEditor: React.FC = () => {
       {/* Header */}
       <div className="mb-8">
         <button
-          onClick={() => navigate('/admin/websites')}
+          onClick={() => navigate("/admin/websites")}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
         >
           <ArrowLeft size={20} />
           Back to Websites
         </button>
-        <h1 className="text-3xl font-bold text-gray-900">{website.site_title}</h1>
+        <h1 className="text-3xl font-bold text-gray-900">
+          {title || "Untitled Website"}
+        </h1>
         <p className="text-gray-600 mt-1">Edit website settings and theme</p>
       </div>
 
@@ -259,7 +250,12 @@ export const WebsiteEditor: React.FC = () => {
       <div className="max-w-2xl space-y-6">
         {/* Basic Info */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Basic Information</h2>
+          <div className="flex items-center gap-2 mb-4">
+            <Globe size={24} className="text-gray-700" />
+            <h2 className="text-xl font-bold text-gray-900">
+              Basic Information
+            </h2>
+          </div>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -267,8 +263,8 @@ export const WebsiteEditor: React.FC = () => {
               </label>
               <input
                 type="text"
-                value={website.site_title}
-                onChange={(e) => setWebsite({ ...website, site_title: e.target.value })}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -279,8 +275,12 @@ export const WebsiteEditor: React.FC = () => {
               <div className="flex items-center gap-2">
                 <input
                   type="text"
-                  value={website.subdomain}
-                  onChange={(e) => setWebsite({ ...website, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                  value={subdomain}
+                  onChange={(e) =>
+                    setSubdomain(
+                      e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""),
+                    )
+                  }
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <span className="text-sm text-gray-500">.{domain}</span>
@@ -295,37 +295,43 @@ export const WebsiteEditor: React.FC = () => {
             <Palette size={24} className="text-gray-700" />
             <h2 className="text-xl font-bold text-gray-900">Theme</h2>
           </div>
-          <p className="text-sm text-gray-600 mb-4">Choose from 5 professional theme presets</p>
-          
+          <p className="text-sm text-gray-600 mb-4">
+            Choose from 5 professional theme presets
+          </p>
+
           <div className="grid grid-cols-1 gap-3">
-            {themePresets.map((theme) => (
+            {DEFAULT_THEMES.map((theme) => (
               <button
                 key={theme.id}
-                onClick={() => setWebsite({ ...website, theme_preset_id: theme.id })}
+                onClick={() => setSelectedTheme(theme.id)}
                 className={`p-4 rounded-lg border-2 transition text-left ${
-                  website.theme_preset_id === theme.id
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
+                  selectedTheme === theme.id
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300"
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-gray-900">{theme.display_name}</h3>
-                  {website.theme_preset_id === theme.id && (
+                  <h3 className="font-semibold text-gray-900">{theme.name}</h3>
+                  {selectedTheme === theme.id && (
                     <span className="px-2 py-1 bg-blue-500 text-white text-xs font-medium rounded-full">
                       Active
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-gray-600 mb-3">{theme.description}</p>
+                <p className="text-sm text-gray-600 mb-3">
+                  {theme.description}
+                </p>
                 <div className="flex gap-2">
-                  {Object.entries(theme.colors).slice(0, 4).map(([key, value]) => (
-                    <div
-                      key={key}
-                      className="w-8 h-8 rounded border border-gray-300"
-                      style={{ backgroundColor: value as string }}
-                      title={key}
-                    />
-                  ))}
+                  {Object.entries(theme.colors)
+                    .slice(0, 4)
+                    .map(([key, value]) => (
+                      <div
+                        key={key}
+                        className="w-8 h-8 rounded border border-gray-300"
+                        style={{ backgroundColor: value }}
+                        title={key}
+                      />
+                    ))}
                 </div>
               </button>
             ))}
@@ -338,26 +344,23 @@ export const WebsiteEditor: React.FC = () => {
             <MessageCircle size={24} className="text-gray-700" />
             <h2 className="text-xl font-bold text-gray-900">Integrations</h2>
           </div>
-          
+
           <div className="space-y-6">
             {/* Facebook Messenger */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Facebook Messenger ID
+                Facebook Messenger Page ID
               </label>
               <p className="text-xs text-gray-500 mb-2">
-                Enter your Facebook Page ID or Username. When customers checkout, they will be redirected to your Messenger.
+                Enter your Facebook Page ID or Username for checkout redirects.
               </p>
               <input
                 type="text"
-                value={facebookMessengerId}
-                onChange={(e) => setFacebookMessengerId(e.target.value)}
+                value={messengerPageId}
+                onChange={(e) => setMessengerPageId(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="your-page-id or your-page-username"
+                placeholder="your-page-id or 123456789012345"
               />
-              <p className="text-xs text-gray-500 mt-2">
-                Example: <code className="bg-gray-100 px-1 rounded">yourbakery</code> or <code className="bg-gray-100 px-1 rounded">123456789012345</code>
-              </p>
             </div>
 
             {/* Chat Support Toggle */}
@@ -368,19 +371,19 @@ export const WebsiteEditor: React.FC = () => {
                     Chat Support
                   </label>
                   <p className="text-xs text-gray-500">
-                    Enable live chat support widget on your website. Disabled by default.
+                    Enable AI-powered chat widget on your website.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setChatSupportEnabled(!chatSupportEnabled)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    chatSupportEnabled ? 'bg-blue-600' : 'bg-gray-300'
+                    chatSupportEnabled ? "bg-blue-600" : "bg-gray-300"
                   }`}
                 >
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      chatSupportEnabled ? 'translate-x-6' : 'translate-x-1'
+                      chatSupportEnabled ? "translate-x-6" : "translate-x-1"
                     }`}
                   />
                 </button>
@@ -401,21 +404,18 @@ export const WebsiteEditor: React.FC = () => {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Hi! How can we help you today?"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      This message will be shown when users first open the chat widget.
-                    </p>
                   </div>
 
-                  {/* Gemini Info - Uses environment variable */}
-                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 mb-4">
+                  {/* Gemini Info */}
+                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                     <p className="text-sm text-blue-800">
-                      <strong>🤖 Using Google Gemini</strong><br />
-                      API Key is automatically loaded from <code className="bg-white px-1 rounded">VITE_GEMINI_API_KEY</code> environment variable (same as AI content generation).
-                      {!import.meta.env.VITE_GEMINI_API_KEY && (
-                        <span className="block mt-1 text-red-600 text-xs">
-                          ⚠️ Warning: VITE_GEMINI_API_KEY not found in environment variables.
-                        </span>
-                      )}
+                      <strong>🤖 Using Google Gemini</strong>
+                      <br />
+                      API Key is loaded from{" "}
+                      <code className="bg-white px-1 rounded">
+                        VITE_GEMINI_API_KEY
+                      </code>{" "}
+                      environment variable.
                     </p>
                   </div>
 
@@ -427,49 +427,32 @@ export const WebsiteEditor: React.FC = () => {
                     <textarea
                       value={chatbotConfigJson}
                       onChange={(e) => setChatbotConfigJson(e.target.value)}
-                      rows={4}
+                      rows={3}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-                      placeholder='{"model": "gemini-2.5-flash", "temperature": 0.7, "maxTokens": 500}'
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Gemini-specific configuration. Example: <code className="bg-gray-100 px-1 rounded">{"{\"model\": \"gemini-2.5-flash\", \"temperature\": 0.7}"}</code>
-                    </p>
                   </div>
 
-                  {/* Knowledge Base - Google Sheets Only */}
-                  <div className="mt-4 pt-4 border-t border-gray-200">
+                  {/* Knowledge Base URL */}
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Knowledge Base (Google Sheets)
+                      Knowledge Base URL (Google Sheets)
                     </label>
                     <input
                       type="url"
                       value={knowledgeBaseSheetsUrl}
-                      onChange={(e) => setKnowledgeBaseSheetsUrl(e.target.value)}
+                      onChange={(e) =>
+                        setKnowledgeBaseSheetsUrl(e.target.value)
+                      }
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono"
-                      placeholder={import.meta.env.VITE_GOOGLE_SHEETS_KB_URL || "https://script.google.com/macros/s/YOUR-SCRIPT-ID/exec"}
+                      placeholder="https://script.google.com/macros/s/YOUR-SCRIPT-ID/exec"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      <strong>💡 Pro Tip:</strong> You can set this globally in <code className="bg-gray-100 px-1 rounded">.env</code> as <code className="bg-gray-100 px-1 rounded">VITE_GOOGLE_SHEETS_KB_URL</code> so you don't need to paste it for each website!
-                      The system will automatically append <code className="bg-gray-100 px-1 rounded">?website=subdomain</code> to fetch the correct tab.
+                      Set globally via{" "}
+                      <code className="bg-gray-100 px-1 rounded">
+                        VITE_GOOGLE_SHEETS_KB_URL
+                      </code>{" "}
+                      or per-website here.
                     </p>
-                    {import.meta.env.VITE_GOOGLE_SHEETS_KB_URL && (
-                      <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">
-                        <p className="text-xs text-green-700">
-                          ✅ <strong>Global URL detected:</strong> Using <code className="bg-white px-1 rounded">{import.meta.env.VITE_GOOGLE_SHEETS_KB_URL}</code> from environment variable. You can override it per-website above if needed.
-                        </p>
-                      </div>
-                    )}
-                    <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-xs text-gray-700 mb-2">
-                        <strong>📋 Quick Setup:</strong>
-                      </p>
-                      <ol className="text-xs text-gray-700 list-decimal list-inside space-y-1 ml-2">
-                        <li>Create Google Spreadsheet with tabs for each website</li>
-                        <li>Deploy Apps Script (see <code className="bg-white px-1 rounded">google-apps-script-kb.js</code>)</li>
-                        <li>Add to <code className="bg-white px-1 rounded">.env</code>: <code className="bg-white px-1 rounded">VITE_GOOGLE_SHEETS_KB_URL=your-url</code> (set once, works for all websites)</li>
-                        <li>Or paste URL above for this website only</li>
-                      </ol>
-                    </div>
                   </div>
                 </div>
               )}
@@ -501,4 +484,3 @@ export const WebsiteEditor: React.FC = () => {
     </div>
   );
 };
-

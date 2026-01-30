@@ -3,13 +3,23 @@
  * AI-powered content generation for websites
  */
 
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
-import { generateWebsiteContent, type AIContentRequest, listAvailableModels } from '../../lib/gemini-ai';
-import { populateWebsiteFromAI } from '../../lib/populate-ai-content';
-import { useWebsite } from '../../contexts/WebsiteContext';
-import { ArrowLeft, Sparkles, Loader, CheckCircle, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { supabase } from "../../lib/supabase";
+import {
+  generateWebsiteContent,
+  type AIContentRequest,
+  listAvailableModels,
+} from "../../lib/gemini-ai";
+import { populateWebsiteFromAI } from "../../lib/populate-ai-content";
+import { useWebsite } from "../../contexts/WebsiteContext";
+import {
+  ArrowLeft,
+  Sparkles,
+  Loader,
+  CheckCircle,
+  AlertCircle,
+} from "lucide-react";
 
 export const ContentManagement: React.FC = () => {
   const { websiteId } = useParams();
@@ -19,13 +29,13 @@ export const ContentManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [aiForm, setAiForm] = useState<AIContentRequest>({
-    businessName: '',
-    businessType: '',
+    businessName: "",
+    businessType: "",
   });
   const [generationStatus, setGenerationStatus] = useState<{
-    status: 'idle' | 'generating' | 'success' | 'error';
+    status: "idle" | "generating" | "success" | "error";
     message: string;
-  }>({ status: 'idle', message: '' });
+  }>({ status: "idle", message: "" });
 
   useEffect(() => {
     loadWebsite();
@@ -37,63 +47,71 @@ export const ContentManagement: React.FC = () => {
   const loadWebsite = async () => {
     try {
       const { data, error } = await supabase
-        .from('websites')
-        .select('*')
-        .eq('id', websiteId)
+        .from("websites")
+        .select("*")
+        .eq("id", websiteId)
         .single();
 
       if (error) throw error;
       setWebsite(data);
-      
+
       // Pre-fill form with website name
       if (data) {
         setAiForm({
-          businessName: data.site_title || '',
-          businessType: '',
+          businessName: data.title || "",
+          businessType: "",
         });
       }
     } catch (error) {
-      console.error('Error loading website:', error);
+      console.error("Error loading website:", error);
     } finally {
       setLoading(false);
     }
-    }
+  };
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!aiForm.businessName || !aiForm.businessType) {
-      alert('Please fill in both business name and type');
+      alert("Please fill in both business name and type");
       return;
     }
 
     setGenerating(true);
-    setGenerationStatus({ status: 'generating', message: 'Generating content with AI...' });
+    setGenerationStatus({
+      status: "generating",
+      message: "Generating content with AI...",
+    });
 
     try {
       // Generate content using Gemini
       const generatedContent = await generateWebsiteContent(aiForm);
-      
-      setGenerationStatus({ status: 'generating', message: 'Saving content to database...' });
-      
+
+      setGenerationStatus({
+        status: "generating",
+        message: "Saving content to database...",
+      });
+
       // Populate website with generated content
       await populateWebsiteFromAI(websiteId!, generatedContent);
-      
-      setGenerationStatus({ 
-        status: 'success', 
-        message: 'Content generated and saved successfully! Refreshing content...' 
+
+      setGenerationStatus({
+        status: "success",
+        message:
+          "Content generated and saved successfully! Refreshing content...",
       });
-      
+
       // Refresh all components to show new content
       refreshContent();
-      
+
       // Reset form
-      setAiForm({ businessName: '', businessType: '' });
+      setAiForm({ businessName: "", businessType: "" });
     } catch (error: any) {
-      console.error('Error generating content:', error);
-      setGenerationStatus({ 
-        status: 'error', 
-        message: error.message || 'Failed to generate content. Please try again.' 
+      console.error("Error generating content:", error);
+      setGenerationStatus({
+        status: "error",
+        message:
+          error.message || "Failed to generate content. Please try again.",
       });
     } finally {
       setGenerating(false);
@@ -124,13 +142,13 @@ export const ContentManagement: React.FC = () => {
       {/* Header */}
       <div className="mb-8">
         <button
-          onClick={() => navigate('/admin/websites')}
+          onClick={() => navigate("/admin/websites")}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
         >
           <ArrowLeft size={20} />
           Back to Websites
         </button>
-        <h1 className="text-3xl font-bold text-gray-900">{website.site_title}</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{website.title}</h1>
         <p className="text-gray-600 mt-1">AI Content Generation</p>
       </div>
 
@@ -139,12 +157,15 @@ export const ContentManagement: React.FC = () => {
         <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl shadow-sm border-2 border-purple-200 p-6">
           <div className="flex items-center gap-3 mb-4">
             <Sparkles size={28} className="text-purple-600" />
-            <h2 className="text-2xl font-bold text-gray-900">AI Content Wizard</h2>
+            <h2 className="text-2xl font-bold text-gray-900">
+              AI Content Wizard
+            </h2>
           </div>
-          
+
           <p className="text-gray-700 mb-6">
-            Enter your business name and type, and we will generate the full website content including 
-            products, benefits, and testimonials for you using Google's Gemini AI.
+            Enter your business name and type, and we will generate the full
+            website content including products, benefits, and testimonials for
+            you using Google's Gemini AI.
           </p>
 
           <form onSubmit={handleGenerate} className="space-y-4">
@@ -156,7 +177,9 @@ export const ContentManagement: React.FC = () => {
                 <input
                   type="text"
                   value={aiForm.businessName}
-                  onChange={(e) => setAiForm({ ...aiForm, businessName: e.target.value })}
+                  onChange={(e) =>
+                    setAiForm({ ...aiForm, businessName: e.target.value })
+                  }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="The Golden Crumb"
                   required
@@ -169,7 +192,9 @@ export const ContentManagement: React.FC = () => {
                 <input
                   type="text"
                   value={aiForm.businessType}
-                  onChange={(e) => setAiForm({ ...aiForm, businessType: e.target.value })}
+                  onChange={(e) =>
+                    setAiForm({ ...aiForm, businessType: e.target.value })
+                  }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="Bakery, Restaurant, Cafe, etc."
                   required
@@ -197,29 +222,36 @@ export const ContentManagement: React.FC = () => {
           </form>
 
           {/* Status Message */}
-          {generationStatus.status !== 'idle' && (
-            <div className={`mt-4 p-4 rounded-lg flex items-start gap-3 ${
-              generationStatus.status === 'success' 
-                ? 'bg-green-50 border border-green-200' 
-                : generationStatus.status === 'error'
-                ? 'bg-red-50 border border-red-200'
-                : 'bg-blue-50 border border-blue-200'
-            }`}>
-              {generationStatus.status === 'success' ? (
+          {generationStatus.status !== "idle" && (
+            <div
+              className={`mt-4 p-4 rounded-lg flex items-start gap-3 ${
+                generationStatus.status === "success"
+                  ? "bg-green-50 border border-green-200"
+                  : generationStatus.status === "error"
+                    ? "bg-red-50 border border-red-200"
+                    : "bg-blue-50 border border-blue-200"
+              }`}
+            >
+              {generationStatus.status === "success" ? (
                 <CheckCircle size={20} className="text-green-600 mt-0.5" />
-              ) : generationStatus.status === 'error' ? (
+              ) : generationStatus.status === "error" ? (
                 <AlertCircle size={20} className="text-red-600 mt-0.5" />
               ) : (
-                <Loader size={20} className="text-blue-600 mt-0.5 animate-spin" />
+                <Loader
+                  size={20}
+                  className="text-blue-600 mt-0.5 animate-spin"
+                />
               )}
               <div className="flex-1">
-                <p className={`text-sm font-medium ${
-                  generationStatus.status === 'success' 
-                    ? 'text-green-800' 
-                    : generationStatus.status === 'error'
-                    ? 'text-red-800'
-                    : 'text-blue-800'
-                }`}>
+                <p
+                  className={`text-sm font-medium ${
+                    generationStatus.status === "success"
+                      ? "text-green-800"
+                      : generationStatus.status === "error"
+                        ? "text-red-800"
+                        : "text-blue-800"
+                  }`}
+                >
                   {generationStatus.message}
                 </p>
               </div>
@@ -229,11 +261,15 @@ export const ContentManagement: React.FC = () => {
 
         {/* Info Box */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">What gets generated?</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            What gets generated?
+          </h3>
           <ul className="space-y-2 text-sm text-gray-600">
             <li className="flex items-start gap-2">
               <CheckCircle size={16} className="text-green-600 mt-0.5" />
-              <span>Hero section with compelling headline and call-to-action</span>
+              <span>
+                Hero section with compelling headline and call-to-action
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle size={16} className="text-green-600 mt-0.5" />
@@ -257,4 +293,3 @@ export const ContentManagement: React.FC = () => {
     </div>
   );
 };
-

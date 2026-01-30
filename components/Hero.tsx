@@ -1,53 +1,72 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Image as ImageIcon, Plus, Trash2 } from 'lucide-react';
-import { supabase, getWebsiteId } from '../src/lib/supabase';
-import type { HeroContent, HeroSlide } from '../src/types/database.types';
-import { EditableText } from '../src/components/editor/EditableText';
-import { useEditor } from '../src/contexts/EditorContext';
-import { useWebsite } from '../src/contexts/WebsiteContext';
+import React, { useState, useEffect, useRef } from "react";
+import {
+  motion,
+  AnimatePresence,
+  useScroll,
+  useTransform,
+} from "framer-motion";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Image as ImageIcon,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import type { HeroContent, HeroSlide } from "../src/types/database.types";
+import { EditableText } from "../src/components/editor/EditableText";
+import { useEditor } from "../src/contexts/EditorContext";
+import { useWebsite } from "../src/contexts/WebsiteContext";
+
+// Default hero content
+const DEFAULT_HERO: HeroContent = {
+  id: "1",
+  website_id: "",
+  slides: [
+    {
+      id: 1,
+      image:
+        "https://images.unsplash.com/photo-1509042239860-f550ce710b93?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80",
+      title: "Welcome to The Golden Crumb",
+      subtitle: "Freshly Baked Goodness",
+      order: 0,
+    },
+  ],
+  button_text: "Order Now",
+  button_link: "#menu",
+  show_button: true,
+  autoplay: true,
+  autoplay_interval: 5000,
+  show_navigation: true,
+  show_indicators: true,
+  parallax_enabled: true,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
 
 export const Hero: React.FC = () => {
   const [content, setContent] = useState<HeroContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState(0);
   const { isEditing, saveField } = useEditor();
-  const { contentVersion } = useWebsite();
+  const { websiteData, loading: websiteLoading, contentVersion } = useWebsite();
 
   useEffect(() => {
-    fetchHeroContent();
-  }, [contentVersion]); // Refetch when content version changes
-
-  const fetchHeroContent = async () => {
-    try {
-      const websiteId = await getWebsiteId();
-      if (!websiteId) {
-        console.error('No website ID found');
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('hero_content')
-        .select('*')
-        .eq('website_id', websiteId)
-        .single();
-
-      if (error) throw error;
-      setContent(data as HeroContent);
-    } catch (error) {
-      console.error('Error fetching hero content:', error);
-    } finally {
+    if (!websiteLoading) {
       setLoading(false);
+      if (websiteData?.content?.hero) {
+        setContent(websiteData.content.hero as HeroContent);
+      } else {
+        setContent(DEFAULT_HERO);
+      }
     }
-  };
+  }, [websiteData?.content?.hero, websiteLoading, contentVersion]);
 
-  const slides = content?.slides as HeroSlide[] || [];
+  const slides = (content?.slides as HeroSlide[]) || [];
 
   useEffect(() => {
     // Disable autoplay when editing
     if (isEditing || slides.length === 0 || !content?.autoplay) return;
-    
+
     const timer = setInterval(() => {
       setCurrent((prev) => (prev + 1) % slides.length);
     }, content.autoplay_interval || 5000);
@@ -55,94 +74,107 @@ export const Hero: React.FC = () => {
   }, [slides.length, content?.autoplay, content?.autoplay_interval, isEditing]);
 
   const nextSlide = () => setCurrent((prev) => (prev + 1) % slides.length);
-  const prevSlide = () => setCurrent((prev) => (prev - 1 + slides.length) % slides.length);
+  const prevSlide = () =>
+    setCurrent((prev) => (prev - 1 + slides.length) % slides.length);
 
   const handleImageChange = async (slideIndex: number) => {
-    const newImageUrl = prompt('Enter new image URL:', slides[slideIndex].image);
+    const newImageUrl = prompt(
+      "Enter new image URL:",
+      slides[slideIndex].image,
+    );
     if (newImageUrl && newImageUrl !== slides[slideIndex].image) {
       try {
         const updatedSlides = [...slides];
-        updatedSlides[slideIndex] = { ...updatedSlides[slideIndex], image: newImageUrl };
-        await saveField('hero_content', 'slides', updatedSlides, content.id);
-        setContent({ ...content, slides: updatedSlides as any });
-        alert('Image saved successfully!');
+        updatedSlides[slideIndex] = {
+          ...updatedSlides[slideIndex],
+          image: newImageUrl,
+        };
+        await saveField("hero", "slides", updatedSlides);
+        setContent({ ...content!, slides: updatedSlides });
+        alert("Image saved successfully!");
       } catch (error) {
-        console.error('Error saving image:', error);
-        alert('Failed to save image. Please try again.');
+        console.error("Error saving image:", error);
+        alert("Failed to save image. Please try again.");
       }
     }
   };
 
   const handleAddSlide = async () => {
     if (!content) return;
-    
+
     try {
       // Generate a new ID (use max existing ID + 1, or Date.now() if no slides)
-      const maxId = slides.length > 0 
-        ? Math.max(...slides.map(s => s.id || 0))
-        : 0;
+      const maxId =
+        slides.length > 0 ? Math.max(...slides.map((s) => s.id || 0)) : 0;
       const newId = maxId + 1;
-      
+
       // Get max order value
-      const maxOrder = slides.length > 0
-        ? Math.max(...slides.map(s => s.order || 0))
-        : -1;
-      
+      const maxOrder =
+        slides.length > 0 ? Math.max(...slides.map((s) => s.order || 0)) : -1;
+
       const newSlide: HeroSlide = {
         id: newId,
-        image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1920',
-        title: 'New Slide Title',
-        subtitle: 'New slide subtitle',
-        order: maxOrder + 1
+        image:
+          "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1920",
+        title: "New Slide Title",
+        subtitle: "New slide subtitle",
+        order: maxOrder + 1,
       };
-      
+
       const updatedSlides = [...slides, newSlide];
-      await saveField('hero_content', 'slides', updatedSlides, content.id);
-      setContent({ ...content, slides: updatedSlides as any });
-      
+      await saveField("hero", "slides", updatedSlides);
+      setContent({ ...content!, slides: updatedSlides });
+
       // Switch to the new slide
       setCurrent(updatedSlides.length - 1);
     } catch (error) {
-      console.error('Error adding slide:', error);
-      alert('Failed to add slide. Please try again.');
+      console.error("Error adding slide:", error);
+      alert("Failed to add slide. Please try again.");
     }
   };
 
   const handleDeleteSlide = async () => {
     if (!content || slides.length <= 1) {
-      alert('Cannot delete the last slide. You must have at least one slide.');
+      alert("Cannot delete the last slide. You must have at least one slide.");
       return;
     }
-    
-    if (!confirm(`Are you sure you want to delete this slide?\n\n"${slides[current].title}"`)) {
+
+    if (
+      !confirm(
+        `Are you sure you want to delete this slide?\n\n"${slides[current].title}"`,
+      )
+    ) {
       return;
     }
-    
+
     try {
       const updatedSlides = slides.filter((_, idx) => idx !== current);
-      
+
       // Reorder slides to maintain sequential order
       const reorderedSlides = updatedSlides.map((slide, idx) => ({
         ...slide,
-        order: idx
+        order: idx,
       }));
-      
-      await saveField('hero_content', 'slides', reorderedSlides, content.id);
-      setContent({ ...content, slides: reorderedSlides as any });
-      
+
+      await saveField("hero", "slides", reorderedSlides);
+      setContent({ ...content!, slides: reorderedSlides });
+
       // Adjust current index if needed
       if (current >= updatedSlides.length) {
         setCurrent(updatedSlides.length - 1);
       }
     } catch (error) {
-      console.error('Error deleting slide:', error);
-      alert('Failed to delete slide. Please try again.');
+      console.error("Error deleting slide:", error);
+      alert("Failed to delete slide. Please try again.");
     }
   };
 
   if (loading) {
     return (
-      <section id="hero" className="relative h-[90vh] overflow-hidden bg-bakery-dark flex items-center justify-center">
+      <section
+        id="hero"
+        className="relative h-[90vh] overflow-hidden bg-bakery-dark flex items-center justify-center"
+      >
         <div className="text-white text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
           <p className="font-sans">Loading...</p>
@@ -153,7 +185,10 @@ export const Hero: React.FC = () => {
 
   if (!content || slides.length === 0) {
     return (
-      <section id="hero" className="relative h-[90vh] overflow-hidden bg-bakery-dark flex items-center justify-center">
+      <section
+        id="hero"
+        className="relative h-[90vh] overflow-hidden bg-bakery-dark flex items-center justify-center"
+      >
         <div className="text-white text-center">
           <p className="font-serif text-2xl">No content available</p>
         </div>
@@ -162,11 +197,12 @@ export const Hero: React.FC = () => {
   }
 
   return (
-    <section id="hero" className="relative h-[90vh] overflow-hidden bg-bakery-dark">
+    <section
+      id="hero"
+      className="relative h-[90vh] overflow-hidden bg-bakery-dark"
+    >
       {/* Background - Parallax removed to fix hydration error */}
-      <div 
-        className="absolute -top-[15%] left-0 w-full h-[130%] z-0"
-      >
+      <div className="absolute -top-[15%] left-0 w-full h-[130%] z-0">
         <AnimatePresence mode="wait">
           <motion.div
             key={current}
@@ -190,17 +226,19 @@ export const Hero: React.FC = () => {
       {isEditing && (
         <div className="absolute bottom-4 left-4 flex flex-col gap-2 z-50">
           {/* Change Image Button */}
-          <div 
+          <div
             className="cursor-pointer"
             onClick={() => handleImageChange(current)}
             title="Click to change background image"
           >
             <div className="bg-white/95 backdrop-blur-sm rounded-lg px-4 py-2 flex items-center gap-2 shadow-lg hover:bg-white transition-colors border-2 border-blue-500">
               <ImageIcon size={20} className="text-gray-700" />
-              <span className="text-gray-700 font-medium text-sm">Change Background Image</span>
+              <span className="text-gray-700 font-medium text-sm">
+                Change Background Image
+              </span>
             </div>
           </div>
-          
+
           {/* Add/Delete Slide Buttons */}
           <div className="flex gap-2">
             <button
@@ -209,17 +247,25 @@ export const Hero: React.FC = () => {
               title="Add a new slide"
             >
               <Plus size={20} className="text-gray-700" />
-              <span className="text-gray-700 font-medium text-sm">Add Slide</span>
+              <span className="text-gray-700 font-medium text-sm">
+                Add Slide
+              </span>
             </button>
-            
+
             <button
               onClick={handleDeleteSlide}
               disabled={slides.length <= 1}
               className="bg-white/95 backdrop-blur-sm rounded-lg px-4 py-2 flex items-center gap-2 shadow-lg hover:bg-white transition-colors border-2 border-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              title={slides.length <= 1 ? "Cannot delete the last slide" : "Delete current slide"}
+              title={
+                slides.length <= 1
+                  ? "Cannot delete the last slide"
+                  : "Delete current slide"
+              }
             >
               <Trash2 size={20} className="text-gray-700" />
-              <span className="text-gray-700 font-medium text-sm">Delete Slide</span>
+              <span className="text-gray-700 font-medium text-sm">
+                Delete Slide
+              </span>
             </button>
           </div>
         </div>
@@ -228,12 +274,12 @@ export const Hero: React.FC = () => {
       {/* Content */}
       <div className="absolute inset-0 flex items-center justify-center text-center px-4 z-10 pointer-events-none">
         <div className="max-w-4xl mx-auto pointer-events-auto">
-          <AnimatePresence mode={isEditing ? false : "wait"}>
+          <AnimatePresence mode={isEditing ? undefined : "wait"}>
             <motion.div
-              key={isEditing ? 'editing' : current}
-              initial={isEditing ? false : { y: 20, opacity: 0 }}
+              key={isEditing ? "editing" : current}
+              initial={isEditing ? undefined : { y: 20, opacity: 0 }}
               animate={isEditing ? {} : { y: 0, opacity: 1 }}
-              exit={isEditing ? false : { y: -20, opacity: 0 }}
+              exit={isEditing ? undefined : { y: -20, opacity: 0 }}
               transition={isEditing ? {} : { duration: 0.5, delay: 0.2 }}
             >
               {isEditing ? (
@@ -241,8 +287,16 @@ export const Hero: React.FC = () => {
                   value={slides[current].title}
                   onSave={async (newValue) => {
                     const updatedSlides = [...slides];
-                    updatedSlides[current] = { ...updatedSlides[current], title: newValue };
-                    await saveField('hero_content', 'slides', updatedSlides, content.id);
+                    updatedSlides[current] = {
+                      ...updatedSlides[current],
+                      title: newValue,
+                    };
+                    await saveField(
+                      "hero",
+                      "slides",
+                      updatedSlides,
+                      content.id,
+                    );
                     setContent({ ...content, slides: updatedSlides as any });
                   }}
                   tag="h1"
@@ -258,8 +312,16 @@ export const Hero: React.FC = () => {
                   value={slides[current].subtitle}
                   onSave={async (newValue) => {
                     const updatedSlides = [...slides];
-                    updatedSlides[current] = { ...updatedSlides[current], subtitle: newValue };
-                    await saveField('hero_content', 'slides', updatedSlides, content.id);
+                    updatedSlides[current] = {
+                      ...updatedSlides[current],
+                      subtitle: newValue,
+                    };
+                    await saveField(
+                      "hero",
+                      "slides",
+                      updatedSlides,
+                      content.id,
+                    );
                     setContent({ ...content, slides: updatedSlides as any });
                   }}
                   tag="p"
@@ -282,7 +344,12 @@ export const Hero: React.FC = () => {
                     <EditableText
                       value={content.button_text}
                       onSave={async (newValue) => {
-                        await saveField('hero_content', 'button_text', newValue, content.id);
+                        await saveField(
+                          "hero",
+                          "button_text",
+                          newValue,
+                          content.id,
+                        );
                         setContent({ ...content, button_text: newValue });
                       }}
                       tag="span"
@@ -325,9 +392,8 @@ export const Hero: React.FC = () => {
             <button
               key={idx}
               onClick={() => setCurrent(idx)}
-              className={`w-3 h-3 rounded-full transition-all ${
-                idx === current ? 'bg-white w-8' : 'bg-white/50'
-              }`}
+              className={`w-3 h-3 rounded-full transition-all ${idx === current ? "bg-white w-8" : "bg-white/50"
+                }`}
             />
           ))}
         </div>

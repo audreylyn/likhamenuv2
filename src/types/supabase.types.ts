@@ -1,9 +1,6 @@
 /**
  * Supabase Database Types
  * Auto-generated type definitions for Supabase queries
- * 
- * This is a simplified version. For production, you should generate
- * types using: npx supabase gen types typescript --project-id PROJECT_ID
  */
 
 export type Json =
@@ -12,74 +9,128 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[]
+  | Json[];
 
 export interface Database {
   public: {
     Tables: {
       websites: {
         Row: {
-          id: string
-          subdomain: string
-          site_title: string
-          site_description: string | null
-          logo_url: string | null
-          favicon_url: string | null
-          is_active: boolean
-          created_at: string
-          updated_at: string
-        }
+          id: string;
+          owner: string | null;
+          subdomain: string;
+          title: string | null;
+          logo: string | null;
+          favicon: string | null;
+          titlefont: string | null;
+          status: string | null;
+          createdat: string | null;
+          updatedat: string | null;
+          theme: Json;
+          messenger: Json;
+          contactformconfig: Json;
+          enabledsections: Json;
+          content: Json;
+          marketing: Json;
+          assignededitors: Json;
+        };
         Insert: {
-          id?: string
-          subdomain: string
-          site_title: string
-          site_description?: string | null
-          logo_url?: string | null
-          favicon_url?: string | null
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
+          id: string;
+          owner?: string | null;
+          subdomain: string;
+          title?: string | null;
+          logo?: string | null;
+          favicon?: string | null;
+          titlefont?: string | null;
+          status?: string | null;
+          createdat?: string | null;
+          updatedat?: string | null;
+          theme?: Json;
+          messenger?: Json;
+          contactformconfig?: Json;
+          enabledsections?: Json;
+          content?: Json;
+          marketing?: Json;
+          assignededitors?: Json;
+        };
         Update: {
-          id?: string
-          subdomain?: string
-          site_title?: string
-          site_description?: string | null
-          logo_url?: string | null
-          favicon_url?: string | null
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      hero_content: {
+          id?: string;
+          owner?: string | null;
+          subdomain?: string;
+          title?: string | null;
+          logo?: string | null;
+          favicon?: string | null;
+          titlefont?: string | null;
+          status?: string | null;
+          createdat?: string | null;
+          updatedat?: string | null;
+          theme?: Json;
+          messenger?: Json;
+          contactformconfig?: Json;
+          enabledsections?: Json;
+          content?: Json;
+          marketing?: Json;
+          assignededitors?: Json;
+        };
+      };
+      editors: {
         Row: {
-          id: string
-          website_id: string
-          slides: Json
-          button_text: string
-          button_link: string
-          show_button: boolean
-          autoplay: boolean
-          autoplay_interval: number
-          show_navigation: boolean
-          show_indicators: boolean
-          parallax_enabled: boolean
-          created_at: string
-          updated_at: string
-        }
-      }
-      // Add more table definitions as needed
-    }
+          email: string;
+          created_at: string;
+        };
+        Insert: {
+          email: string;
+          created_at?: string;
+        };
+        Update: {
+          email?: string;
+          created_at?: string;
+        };
+      };
+      contact_submissions: {
+        Row: {
+          id: string;
+          website_id: string;
+          name: string;
+          email: string;
+          phone: string | null;
+          subject: string | null;
+          message: string;
+          status: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          website_id: string;
+          name: string;
+          email: string;
+          phone?: string | null;
+          subject?: string | null;
+          message: string;
+          status?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          website_id?: string;
+          name?: string;
+          email?: string;
+          phone?: string | null;
+          subject?: string | null;
+          message?: string;
+          status?: string;
+          created_at?: string;
+        };
+      };
+    };
     Views: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Functions: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Enums: {
-      [_ in never]: never
-    }
-  }
+      [_ in never]: never;
+    };
+  };
 }
-

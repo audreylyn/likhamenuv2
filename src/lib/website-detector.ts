@@ -1,39 +1,78 @@
 /**
  * Website Detection Utility
  * Detects current website from subdomain or query parameter
+ * OPTIMIZED: Single auth check, parallel fetching
  */
 
 import { supabase } from './supabase';
 
+// Cache for auth user to avoid repeated calls
+let cachedUser: any = null;
+let userCacheTime = 0;
+const USER_CACHE_TTL = 30000; // 30 seconds
+
+/**
+ * Get cached user or fetch fresh
+ */
+async function getCachedUser() {
+  const now = Date.now();
+  if (cachedUser !== null && (now - userCacheTime) < USER_CACHE_TTL) {
+    return cachedUser;
+  }
+
+  const { data: { user } } = await supabase.auth.getUser();
+  cachedUser = user;
+  userCacheTime = now;
+  return user;
+}
+
 /**
  * Extract subdomain from hostname
+ * Supports:
+ * - Production: rose.likhamenu.studio → rose
+ * - Vercel preview: likhamenuv2-xxx.vercel.app → null (use ?site= param)
+ * - Localhost: localhost → null (use ?site= param)
  */
 export function getSubdomain(hostname: string): string | null {
-  // Skip localhost
-  if (hostname === 'localhost' || hostname.startsWith('127.0.0.1')) {
+  // Skip localhost and IP addresses
+  if (!hostname || hostname === 'localhost' || hostname.startsWith('127.')) {
     return null;
   }
 
-  // Extract subdomain
-  // Example: bakery.likhasiteworks.studio → bakery
+  // Skip Vercel preview URLs (use ?site= param instead)
+  if (hostname.includes('vercel.app')) {
+    return null;
+  }
+
+  // Get the main domain from env
+  const mainDomain = import.meta.env.VITE_DOMAIN || 'likhamenu.studio';
+
+  // Check if this is a subdomain of the main domain
+  // Example: rose.likhamenu.studio → rose
+  if (hostname.endsWith(`.${mainDomain}`)) {
+    const subdomain = hostname.replace(`.${mainDomain}`, '');
+    // Ignore www
+    if (subdomain === 'www') {
+      return null;
+    }
+    return subdomain;
+  }
+
+  // Fallback: Extract first part of hostname for other domains
   const parts = hostname.split('.');
-  
-  // Need at least 3 parts (subdomain.domain.tld)
-  if (parts.length < 3) {
-    return null;
+  if (parts.length >= 3) {
+    const subdomain = parts[0];
+    if (subdomain !== 'www' && subdomain !== 'admin') {
+      return subdomain;
+    }
   }
 
-  // Ignore 'www' and 'admin'
-  const subdomain = parts[0];
-  if (subdomain === 'www' || subdomain === 'admin') {
-    return null;
-  }
-
-  return subdomain;
+  return null;
 }
 
 /**
  * Get current website ID from subdomain or query parameter
+ * OPTIMIZED: Try published first (fast path), auth check only as fallback
  */
 export async function detectWebsiteId(): Promise<string | null> {
   try {
@@ -45,80 +84,58 @@ export async function detectWebsiteId(): Promise<string | null> {
     const hostname = window.location.hostname;
     const params = new URLSearchParams(window.location.search);
 
-    // Development: Check for ?site= parameter first
+    // Get subdomain or site parameter
     const siteParam = params.get('site') || params.get('website');
-    if (siteParam) {
-      // Check if user is authenticated (admins can access inactive websites)
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      // Build query
-      let query = supabase
-        .from('websites')
-        .select('id')
-        .eq('subdomain', siteParam);
-      
-      // Only filter by is_active if user is not authenticated
-      // (authenticated users can access inactive websites via admin policy)
-      if (!user) {
-        query = query.eq('is_active', true);
-      }
-      
-      const { data, error } = await query.single();
+    const subdomain = siteParam || getSubdomain(hostname);
 
-      if (error) {
-        console.error('Error fetching website by parameter:', error);
-        return null;
-      }
-
-      return data?.id || null;
-    }
-
-    // Production: Extract from subdomain
-    const subdomain = getSubdomain(hostname);
     if (!subdomain) {
       return null;
     }
 
-    // Check if user is authenticated (admins can access inactive websites)
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    // Fetch website by subdomain
-    let query = supabase
+    // FAST PATH: Try to fetch published website first (no auth check needed)
+    // This is the common case for public visitors
+    const { data: publishedData, error: publishedError } = await supabase
       .from('websites')
-      .select('id, is_active')
-      .eq('subdomain', subdomain);
-    
-    // Only filter by is_active if user is not authenticated
-    // (authenticated users can access inactive websites via admin policy)
-    if (!user) {
-      query = query.eq('is_active', true);
-    }
-    
-    const { data, error } = await query.single();
+      .select('id')
+      .eq('subdomain', subdomain)
+      .eq('status', 'published')
+      .maybeSingle();
 
-    if (error) {
-      // If website exists but is inactive and user is not authenticated
-      if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
-        // Check if website exists but is inactive
-        const { data: inactiveWebsite } = await supabase
-          .from('websites')
-          .select('id, is_active')
-          .eq('subdomain', subdomain)
-          .maybeSingle();
-        
-        if (inactiveWebsite && !inactiveWebsite.is_active) {
-          // Store in sessionStorage to show appropriate message
-          sessionStorage.setItem('inactive_website', subdomain);
-        }
+    if (publishedData) {
+      sessionStorage.removeItem('inactive_website');
+      return (publishedData as any).id;
+    }
+
+    // SLOW PATH: Published not found - check if user is authenticated for draft access
+    // Only do auth check here (this is the slow part)
+    const user = await getCachedUser();
+
+    if (user) {
+      // User is logged in - try to access any website (including drafts)
+      const { data: userData, error: userError } = await supabase
+        .from('websites')
+        .select('id')
+        .eq('subdomain', subdomain)
+        .maybeSingle();
+
+      if (userData) {
+        sessionStorage.removeItem('inactive_website');
+        return (userData as any).id;
       }
-      console.error('Error fetching website by subdomain:', error);
-      return null;
+    } else {
+      // Not logged in and published not found - check if inactive
+      const { data: inactiveWebsite } = await supabase
+        .from('websites')
+        .select('id, status')
+        .eq('subdomain', subdomain)
+        .maybeSingle();
+
+      if (inactiveWebsite && (inactiveWebsite as any).status !== 'published') {
+        sessionStorage.setItem('inactive_website', subdomain);
+      }
     }
 
-    // Clear any previous inactive website flag
-    sessionStorage.removeItem('inactive_website');
-    
-    return data?.id || null;
+    return null;
   } catch (error) {
     console.error('Error detecting website:', error);
     return null;
@@ -126,11 +143,18 @@ export async function detectWebsiteId(): Promise<string | null> {
 }
 
 /**
+ * Clear user cache (call on login/logout)
+ */
+export function clearUserCache() {
+  cachedUser = null;
+  userCacheTime = 0;
+}
+
+/**
  * Check if current route is admin
  */
 export function isAdminRoute(): boolean {
   if (typeof window === 'undefined') return false;
-  
   return window.location.pathname.startsWith('/admin');
 }
 
@@ -139,7 +163,6 @@ export function isAdminRoute(): boolean {
  */
 export function isEditorRoute(): boolean {
   if (typeof window === 'undefined') return false;
-  
   return window.location.pathname.startsWith('/edit');
 }
 
@@ -183,7 +206,7 @@ export function buildWebsiteUrl(
   mode: 'public' | 'editor' = 'public'
 ): string {
   const isDev = window.location.hostname === 'localhost';
-  
+
   if (isDev) {
     // Development: Use query parameter
     const base = `http://localhost:${window.location.port || 3000}`;
@@ -191,10 +214,8 @@ export function buildWebsiteUrl(
     return `${base}${editPath}${path}?site=${subdomain}`;
   } else {
     // Production: Use subdomain
-    // Use environment variable or default to likhasiteworks.studio
-    const domain = import.meta.env.VITE_DOMAIN || 'likhasiteworks.studio';
+    const domain = (import.meta as any).env.VITE_DOMAIN || 'likhasiteworks.studio';
     const editPath = mode === 'editor' ? '/edit' : '';
     return `https://${subdomain}.${domain}${editPath}${path}`;
   }
 }
-

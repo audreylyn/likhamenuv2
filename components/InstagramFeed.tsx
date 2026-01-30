@@ -1,38 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { Instagram, Heart, MessageCircle, ExternalLink, Image as ImageIcon } from 'lucide-react';
-import { supabase, getWebsiteId } from '../src/lib/supabase';
+import { Instagram, Heart, ExternalLink, Image as ImageIcon } from 'lucide-react';
 import type { InstagramFeedConfig, InstagramFeedItem } from '../src/types/database.types';
 import { EditableText } from '../src/components/editor/EditableText';
 import { useEditor } from '../src/contexts/EditorContext';
+import { useWebsite } from '../src/contexts/WebsiteContext';
 
 export const InstagramFeed: React.FC = () => {
   const [content, setContent] = useState<InstagramFeedConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const { isEditing, saveField } = useEditor();
+  const { websiteData, loading: websiteLoading } = useWebsite();
 
   useEffect(() => {
-    fetchInstagramFeed();
-  }, []);
-
-  const fetchInstagramFeed = async () => {
-    try {
-      const websiteId = await getWebsiteId();
-      if (!websiteId) return;
-
-      const { data, error } = await supabase
-        .from('instagram_feed_config')
-        .select('*')
-        .eq('website_id', websiteId)
-        .single();
-
-      if (error) throw error;
-      setContent(data as InstagramFeedConfig);
-    } catch (error) {
-      console.error('Error fetching Instagram feed:', error);
-    } finally {
+    if (!websiteLoading && websiteData?.content?.instagramFeed) {
+      setContent(websiteData.content.instagramFeed as InstagramFeedConfig);
+      setLoading(false);
+    } else if (!websiteLoading) {
       setLoading(false);
     }
-  };
+  }, [websiteData, websiteLoading]);
 
   if (loading) {
     return (
@@ -52,7 +38,7 @@ export const InstagramFeed: React.FC = () => {
   return (
     <section id="instagramFeed" className="py-20 bg-bakery-cream">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4">
           <div>
@@ -63,8 +49,9 @@ export const InstagramFeed: React.FC = () => {
                   <EditableText
                     value={content.instagram_handle}
                     onSave={async (newValue) => {
-                      await saveField('instagram_feed_config', 'instagram_handle', newValue, content.id);
-                      setContent({ ...content, instagram_handle: newValue });
+                      const newContent = { ...content, instagram_handle: newValue };
+                      await saveField('instagramFeed', 'instagram_handle', newValue);
+                      setContent(newContent);
                     }}
                     tag="span"
                     className="font-bold font-sans tracking-wider text-sm uppercase"
@@ -78,8 +65,9 @@ export const InstagramFeed: React.FC = () => {
               <EditableText
                 value={content.heading}
                 onSave={async (newValue) => {
-                  await saveField('instagram_feed_config', 'heading', newValue, content.id);
-                  setContent({ ...content, heading: newValue });
+                  const newContent = { ...content, heading: newValue };
+                  await saveField('instagramFeed', 'heading', newValue);
+                  setContent(newContent);
                 }}
                 tag="h2"
                 className="font-serif text-3xl md:text-4xl font-bold text-bakery-dark"
@@ -94,8 +82,9 @@ export const InstagramFeed: React.FC = () => {
                 <EditableText
                   value={content.subheading}
                   onSave={async (newValue) => {
-                    await saveField('instagram_feed_config', 'subheading', newValue, content.id);
-                    setContent({ ...content, subheading: newValue });
+                    const newContent = { ...content, subheading: newValue };
+                    await saveField('instagramFeed', 'subheading', newValue);
+                    setContent(newContent);
                   }}
                   tag="p"
                   className="text-gray-600 mt-2"
@@ -106,14 +95,15 @@ export const InstagramFeed: React.FC = () => {
             )}
           </div>
           {content.instagram_url && (
-            <a 
+            <a
               href={isEditing ? '#' : content.instagram_url}
               onClick={isEditing ? (e) => {
                 e.preventDefault();
                 const newUrl = prompt('Enter Instagram profile URL:', content.instagram_url || '');
                 if (newUrl !== null) {
-                  saveField('instagram_feed_config', 'instagram_url', newUrl, content.id);
-                  setContent({ ...content, instagram_url: newUrl });
+                  const newContent = { ...content, instagram_url: newUrl };
+                  saveField('instagramFeed', 'instagram_url', newUrl);
+                  setContent(newContent);
                 }
               } : undefined}
               target={isEditing ? undefined : "_blank"}
@@ -133,10 +123,10 @@ export const InstagramFeed: React.FC = () => {
               const newImageUrl = prompt('Enter new image URL:', post.image_url || '');
               if (newImageUrl !== null && newImageUrl !== post.image_url) {
                 try {
-                  const updatedItems = posts.map((p, i) => 
+                  const updatedItems = posts.map((p, i) =>
                     i === index ? { ...p, image_url: newImageUrl } : p
                   );
-                  await saveField('instagram_feed_config', 'feed_items', updatedItems, content.id);
+                  await saveField('instagramFeed', 'feed_items', updatedItems);
                   setContent({ ...content, feed_items: updatedItems });
                   alert('Image saved successfully!');
                 } catch (error) {
@@ -152,7 +142,7 @@ export const InstagramFeed: React.FC = () => {
                 className="group relative aspect-square overflow-hidden rounded-lg cursor-pointer shadow-md hover:shadow-xl transition-all duration-300"
               >
                 {isEditing && (
-                  <div 
+                  <div
                     className="absolute top-2 right-2 z-50 cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -171,10 +161,10 @@ export const InstagramFeed: React.FC = () => {
                     e.preventDefault();
                     const newUrl = prompt('Enter post URL:', post.post_url || '');
                     if (newUrl !== null) {
-                      const updatedItems = posts.map((p, i) => 
+                      const updatedItems = posts.map((p, i) =>
                         i === index ? { ...p, post_url: newUrl } : p
                       );
-                      saveField('instagram_feed_config', 'feed_items', updatedItems, content.id);
+                      saveField('instagramFeed', 'feed_items', updatedItems);
                       setContent({ ...content, feed_items: updatedItems });
                     }
                   } : undefined}
@@ -182,12 +172,12 @@ export const InstagramFeed: React.FC = () => {
                   rel={isEditing ? undefined : "noopener noreferrer"}
                   className="block w-full h-full"
                 >
-                  <img 
-                    src={post.image_url} 
-                    alt={post.caption} 
+                  <img
+                    src={post.image_url}
+                    alt={post.caption}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                   />
-                  
+
                   {/* Overlay */}
                   <div className="absolute inset-0 bg-bakery-dark/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-6 text-white backdrop-blur-[2px]">
                     <div className="flex items-center gap-2">
@@ -197,10 +187,10 @@ export const InstagramFeed: React.FC = () => {
                           value={post.likes.toString()}
                           onSave={async (newValue) => {
                             const likes = parseInt(newValue) || 0;
-                            const updatedItems = posts.map((p, i) => 
+                            const updatedItems = posts.map((p, i) =>
                               i === index ? { ...p, likes } : p
                             );
-                            await saveField('instagram_feed_config', 'feed_items', updatedItems, content.id);
+                            await saveField('instagramFeed', 'feed_items', updatedItems);
                             setContent({ ...content, feed_items: updatedItems });
                           }}
                           tag="span"
@@ -219,7 +209,7 @@ export const InstagramFeed: React.FC = () => {
 
         {/* Mobile CTA */}
         <div className="mt-8 text-center md:hidden">
-            <p className="text-bakery-dark/70 font-sans mb-4">Share your moments with us #GoldenCrumbMoments</p>
+          <p className="text-bakery-dark/70 font-sans mb-4">Share your moments with us #GoldenCrumbMoments</p>
         </div>
 
       </div>

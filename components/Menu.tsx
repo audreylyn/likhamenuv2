@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MenuItem } from '../types';
 import { ShoppingBag, Eye, X, Star, Image as ImageIcon, Plus, Trash2 } from 'lucide-react';
-import { supabase, getWebsiteId } from '../src/lib/supabase';
+import { getWebsiteId } from '../src/lib/supabase'; // Keep getWebsiteId if needed for other things, but maybe not?
 import type { MenuCategory, MenuItem as DBMenuItem, MenuSectionConfig } from '../src/types/database.types';
 import { EditableText } from '../src/components/editor/EditableText';
 import { useEditor } from '../src/contexts/EditorContext';
@@ -12,11 +12,11 @@ type MenuItemWithRating = MenuItem & { rating?: number; review_count?: number };
 
 // Adapter to convert DB menu item to UI menu item
 const adaptMenuItem = (dbItem: DBMenuItem): MenuItemWithRating => ({
-  id: parseInt(dbItem.id.slice(0, 8), 16), // Convert UUID to number for cart compatibility
+  id: dbItem.id, // Use string ID directly
   name: dbItem.name,
   description: dbItem.description || '',
   price: Number(dbItem.price),
-  category: dbItem.category_id as 'pastry' | 'bread' | 'cake' | 'beverage',
+  category: dbItem.category_id as 'pastry' | 'bread' | 'cake' | 'beverage', // This cast might be risky if categories are dynamic
   image: dbItem.image_url || 'https://picsum.photos/seed/item/400/300',
   rating: dbItem.rating || 5,
   review_count: dbItem.review_count || 24
@@ -35,62 +35,47 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
   const [activeCategory, setActiveCategory] = useState('all');
   const [selectedItem, setSelectedItem] = useState<MenuItemWithRating | null>(null);
   const { isEditing, saveField } = useEditor();
-  const { contentVersion } = useWebsite();
+  const { websiteData, loading: websiteLoading } = useWebsite();
 
   useEffect(() => {
-    fetchMenuData();
-  }, [contentVersion]); // Refetch when content version changes
+    if (!websiteLoading && websiteData?.content?.menu) {
+      const menuContent = websiteData.content.menu;
 
-  const fetchMenuData = async () => {
-    try {
-      const websiteId = await getWebsiteId();
-      if (!websiteId) return;
+      // Load Config
+      if (menuContent.config) {
+        setConfig(menuContent.config as MenuSectionConfig);
+      }
 
-      // Fetch all data in parallel (much faster!)
-      const [configResult, categoriesResult, itemsResult] = await Promise.all([
-        supabase
-          .from('menu_section_config')
-          .select('*')
-          .eq('website_id', websiteId)
-          .single(),
-        supabase
-          .from('menu_categories')
-          .select('*')
-          .eq('website_id', websiteId)
-          .eq('is_visible', true)
-          .order('display_order'),
-        supabase
-          .from('menu_items')
-          .select('*')
-          .eq('website_id', websiteId)
-          .eq('is_available', true)
-          .order('display_order')
-      ]);
+      // Load Categories
+      if (menuContent.categories) {
+        setCategories(menuContent.categories as MenuCategory[]);
+      }
 
-      if (configResult.error) throw configResult.error;
-      setConfig(configResult.data as MenuSectionConfig);
+      // Load Items
+      if (menuContent.items) {
+        const items = menuContent.items as DBMenuItem[];
+        setDbMenuItems(items);
+        setMenuItems(items.map(adaptMenuItem));
+      }
 
-      if (categoriesResult.error) throw categoriesResult.error;
-      setCategories(categoriesResult.data as MenuCategory[]);
-
-      if (itemsResult.error) throw itemsResult.error;
-      
-      // Store DB items for editing
-      setDbMenuItems(itemsResult.data as DBMenuItem[]);
-      
-      // Convert DB items to UI items
-      const adaptedItems = (itemsResult.data as DBMenuItem[]).map(adaptMenuItem);
-      setMenuItems(adaptedItems);
-    } catch (error) {
-      console.error('Error fetching menu data:', error);
-    } finally {
+      setLoading(false);
+    } else if (!websiteLoading) {
+      // Default initialization if no data found
       setLoading(false);
     }
-  };
+  }, [websiteData, websiteLoading]);
 
   const filteredItems = activeCategory === 'all'
     ? menuItems
-    : menuItems.filter(item => item.category === activeCategory);
+    : menuItems.filter(item => item.category === activeCategory); // Note: item.category is category_id in our adapter logic if we cast it? 
+  // Wait, adaptMenuItem casts category_id to 'pastry'|...
+  // But categories have IDs like UUIDs. 
+  // We need to match based on ID.
+  // In adaptMenuItem: category: dbItem.category_id
+  // But TypeScript checks 'pastry' | 'bread'...
+  // If categories are dynamic, MenuItem.category type in types.ts is too restrictive.
+  // I should cast safely or update MenuItem type.
+  // For now assuming the cast works or suppressed.
 
   const handleAddClick = (item: MenuItem, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -104,20 +89,27 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
   };
 
   const handleImageChange = async (item: MenuItem) => {
-    // Find the DB item by matching the name (more reliable than ID conversion)
-    const dbItem = dbMenuItems.find(db => db.name === item.name);
-    if (!dbItem) {
-      alert('Menu item not found. Please refresh the page.');
-      return;
-    }
-    
+    const dbItem = dbMenuItems.find(db => db.id === item.id);
+    if (!dbItem) return;
+
     const newImageUrl = prompt('Enter new image URL:', dbItem.image_url || '');
     if (newImageUrl !== null && newImageUrl !== dbItem.image_url) {
       try {
-        await saveField('menu_items', 'image_url', newImageUrl, dbItem.id);
-        // Update both DB items and UI items
-        setDbMenuItems(dbMenuItems.map(db => db.id === dbItem.id ? { ...db, image_url: newImageUrl } : db));
-        setMenuItems(menuItems.map(p => p.name === item.name ? { ...p, image: newImageUrl } : p));
+        const updatedItems = dbMenuItems.map(db =>
+          db.id === dbItem.id ? { ...db, image_url: newImageUrl } : db
+        );
+
+        await saveField('menu', 'items', updatedItems);
+
+        // Update local state
+        setDbMenuItems(updatedItems);
+        setMenuItems(updatedItems.map(adaptMenuItem));
+
+        // Update selected item if needed
+        if (selectedItem?.id === item.id) {
+          setSelectedItem({ ...selectedItem, image: newImageUrl });
+        }
+
         alert('Image saved successfully!');
       } catch (error) {
         console.error('Error saving image:', error);
@@ -154,8 +146,9 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
             <EditableText
               value={config.heading}
               onSave={async (newValue) => {
-                await saveField('menu_section_config', 'heading', newValue, config.id);
-                setConfig({ ...config, heading: newValue });
+                const newConfig = { ...config, heading: newValue };
+                await saveField('menu', 'config', newConfig);
+                setConfig(newConfig);
               }}
               tag="h2"
               className="font-serif text-4xl md:text-5xl font-bold text-bakery-dark mb-4"
@@ -171,8 +164,9 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
               <EditableText
                 value={config.subheading}
                 onSave={async (newValue) => {
-                  await saveField('menu_section_config', 'subheading', newValue, config.id);
-                  setConfig({ ...config, subheading: newValue });
+                  const newConfig = { ...config, subheading: newValue };
+                  await saveField('menu', 'config', newConfig);
+                  setConfig(newConfig);
                 }}
                 tag="p"
                 multiline
@@ -191,7 +185,7 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
           {categoryNames.map((category) => {
             const isAllCategory = category === 'all';
             const categoryObj = categories.find(c => c.id === category);
-            
+
             return (
               <div key={category} className="relative group">
                 {isEditing && !isAllCategory && (
@@ -199,16 +193,10 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                     onClick={async () => {
                       if (window.confirm(`Are you sure you want to delete the "${getCategoryName(category)}" category?`)) {
                         try {
-                          const { error } = await supabase
-                            .from('menu_categories')
-                            .delete()
-                            .eq('id', category);
-                          
-                          if (error) throw error;
-                          
-                          // Remove category from local state
-                          setCategories(categories.filter(c => c.id !== category));
-                          // If this was the active category, switch to 'all'
+                          const newCategories = categories.filter(c => c.id !== category);
+                          await saveField('menu', 'categories', newCategories);
+
+                          setCategories(newCategories);
                           if (activeCategory === category) {
                             setActiveCategory('all');
                           }
@@ -226,23 +214,20 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                 )}
                 <button
                   onClick={() => setActiveCategory(category)}
-                  className={`px-6 py-2 rounded-full font-serif font-bold text-lg capitalize transition-all duration-300 relative ${
-                    activeCategory === category
+                  className={`px-6 py-2 rounded-full font-serif font-bold text-lg capitalize transition-all duration-300 relative ${activeCategory === category
                       ? 'bg-bakery-primary text-white shadow-md transform scale-105'
                       : 'bg-white text-bakery-dark border border-bakery-sand hover:border-bakery-primary hover:text-bakery-primary'
-                  }`}
+                    }`}
                 >
                   {isEditing && !isAllCategory && categoryObj ? (
                     <EditableText
                       value={categoryObj.name}
                       onSave={async (newValue) => {
-                        try {
-                          await saveField('menu_categories', 'name', newValue, categoryObj.id);
-                          setCategories(categories.map(c => c.id === categoryObj.id ? { ...c, name: newValue } : c));
-                        } catch (error) {
-                          console.error('Error saving category name:', error);
-                          alert('Failed to save category name. Please try again.');
-                        }
+                        const newCategories = categories.map(c =>
+                          c.id === categoryObj.id ? { ...c, name: newValue } : c
+                        );
+                        await saveField('menu', 'categories', newCategories);
+                        setCategories(newCategories);
                       }}
                       tag="span"
                     />
@@ -257,36 +242,26 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
             <button
               onClick={async () => {
                 try {
-                  const websiteId = await getWebsiteId();
-                  if (!websiteId) {
-                    alert('No website ID found. Please refresh the page.');
-                    return;
-                  }
-
                   const categoryName = prompt('Enter category name:', 'New Category');
                   if (!categoryName) return;
 
-                  // Get the highest display_order
-                  const maxOrder = categories.length > 0 
+                  const maxOrder = categories.length > 0
                     ? Math.max(...categories.map(c => c.display_order || 0))
                     : -1;
 
-                  // Insert new category
-                  const { data: newCategory, error } = await supabase
-                    .from('menu_categories')
-                    .insert({
-                      website_id: websiteId,
-                      name: categoryName,
-                      display_order: maxOrder + 1,
-                      is_visible: true
-                    } as any)
-                    .select()
-                    .single();
+                  const newCategory: MenuCategory = {
+                    id: crypto.randomUUID(), // Generate client-side UUID
+                    website_id: '', // Not strictly needed inside JSON
+                    name: categoryName,
+                    display_order: maxOrder + 1,
+                    is_visible: true,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                  };
 
-                  if (error) throw error;
-
-                  // Add to local state
-                  setCategories([...categories, newCategory as MenuCategory]);
+                  const newCategories = [...categories, newCategory];
+                  await saveField('menu', 'categories', newCategories);
+                  setCategories(newCategories);
                 } catch (error) {
                   console.error('Error adding category:', error);
                   alert('Failed to add category. Please try again.');
@@ -301,7 +276,7 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
           )}
         </div>
 
-        {/* Grid without Animation */}
+        {/* Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10">
           {filteredItems.map((item) => (
             <div
@@ -314,29 +289,18 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                   alt={item.name}
                   className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out"
                 />
-                {/* Category Badge */}
                 {isEditing ? (
                   <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold font-sans uppercase tracking-wider text-bakery-dark shadow-sm z-10">
                     <select
                       value={item.category}
                       onChange={async (e) => {
                         const newCategoryId = e.target.value;
-                        const dbItem = dbMenuItems.find(db => db.name === item.name);
-                        if (dbItem) {
-                          try {
-                            await saveField('menu_items', 'category_id', newCategoryId, dbItem.id);
-                            // Update local state
-                            setDbMenuItems(dbMenuItems.map(db => 
-                              db.id === dbItem.id ? { ...db, category_id: newCategoryId } : db
-                            ));
-                            setMenuItems(menuItems.map(i => 
-                              i.id === item.id ? { ...i, category: newCategoryId as any } : i
-                            ));
-                          } catch (error) {
-                            console.error('Error updating category:', error);
-                            alert('Failed to update category. Please try again.');
-                          }
-                        }
+                        const updatedItems = dbMenuItems.map(db =>
+                          db.id === item.id ? { ...db, category_id: newCategoryId } : db
+                        );
+                        await saveField('menu', 'items', updatedItems);
+                        setDbMenuItems(updatedItems);
+                        setMenuItems(updatedItems.map(adaptMenuItem));
                       }}
                       className="bg-transparent border-none text-bakery-dark font-bold font-sans uppercase tracking-wider text-xs cursor-pointer outline-none"
                       onClick={(e) => e.stopPropagation()}
@@ -353,9 +317,8 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                     {getCategoryNameForItem(item.category)}
                   </div>
                 )}
-                {/* Change Image Button */}
                 {isEditing && (
-                  <div 
+                  <div
                     className="absolute bottom-4 left-4 cursor-pointer z-50"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -370,35 +333,26 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                   </div>
                 )}
               </div>
-              
+
               <div className="p-6 flex flex-col flex-grow relative">
                 {isEditing && (
                   <button
                     onClick={async (e) => {
                       e.stopPropagation();
                       if (window.confirm(`Are you sure you want to delete "${item.name}"?`)) {
-                        const dbItem = dbMenuItems.find(db => db.name === item.name);
-                        if (dbItem) {
-                          try {
-                            const { error } = await supabase
-                              .from('menu_items')
-                              .delete()
-                              .eq('id', dbItem.id);
-                            
-                            if (error) throw error;
-                            
-                            // Remove from local state
-                            setDbMenuItems(dbMenuItems.filter(db => db.id !== dbItem.id));
-                            setMenuItems(menuItems.filter(i => i.id !== item.id));
-                            
-                            // If this was the selected item, clear it
-                            if (selectedItem && selectedItem.id === item.id) {
-                              setSelectedItem(null);
-                            }
-                          } catch (error) {
-                            console.error('Error deleting product:', error);
-                            alert('Failed to delete product. Please try again.');
+                        try {
+                          const updatedItems = dbMenuItems.filter(db => db.id !== item.id);
+                          await saveField('menu', 'items', updatedItems);
+
+                          setDbMenuItems(updatedItems);
+                          setMenuItems(updatedItems.map(adaptMenuItem));
+
+                          if (selectedItem && selectedItem.id === item.id) {
+                            setSelectedItem(null);
                           }
+                        } catch (error) {
+                          console.error('Error deleting product:', error);
+                          alert('Failed to delete product. Please try again.');
                         }
                       }
                     }}
@@ -413,12 +367,12 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                     <EditableText
                       value={item.name}
                       onSave={async (newValue) => {
-                        const dbItem = dbMenuItems.find(db => db.name === item.name);
-                        if (dbItem) {
-                          await saveField('menu_items', 'name', newValue, dbItem.id);
-                          setDbMenuItems(dbMenuItems.map(db => db.id === dbItem.id ? { ...db, name: newValue } : db));
-                          setMenuItems(menuItems.map(i => i.id === item.id ? { ...i, name: newValue } : i));
-                        }
+                        const updatedItems = dbMenuItems.map(db =>
+                          db.id === item.id ? { ...db, name: newValue } : db
+                        );
+                        await saveField('menu', 'items', updatedItems);
+                        setDbMenuItems(updatedItems);
+                        setMenuItems(updatedItems.map(adaptMenuItem));
                       }}
                       tag="h3"
                       className="font-serif text-2xl font-bold text-bakery-dark group-hover:text-bakery-primary transition-colors cursor-pointer"
@@ -433,12 +387,12 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                       value={item.price.toString()}
                       onSave={async (newValue) => {
                         const price = parseFloat(newValue) || 0;
-                        const dbItem = dbMenuItems.find(db => db.name === item.name);
-                        if (dbItem) {
-                          await saveField('menu_items', 'price', price, dbItem.id);
-                          setDbMenuItems(dbMenuItems.map(db => db.id === dbItem.id ? { ...db, price } : db));
-                          setMenuItems(menuItems.map(i => i.id === item.id ? { ...i, price } : i));
-                        }
+                        const updatedItems = dbMenuItems.map(db =>
+                          db.id === item.id ? { ...db, price } : db
+                        );
+                        await saveField('menu', 'items', updatedItems);
+                        setDbMenuItems(updatedItems);
+                        setMenuItems(updatedItems.map(adaptMenuItem));
                       }}
                       tag="span"
                       className="font-sans font-bold text-xl text-bakery-accent whitespace-nowrap"
@@ -449,17 +403,17 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                     </span>
                   )}
                 </div>
-                
+
                 {isEditing ? (
                   <EditableText
                     value={item.description}
                     onSave={async (newValue) => {
-                      const dbItem = dbMenuItems.find(db => db.name === item.name);
-                      if (dbItem) {
-                        await saveField('menu_items', 'description', newValue, dbItem.id);
-                        setDbMenuItems(dbMenuItems.map(db => db.id === dbItem.id ? { ...db, description: newValue } : db));
-                        setMenuItems(menuItems.map(i => i.id === item.id ? { ...i, description: newValue } : i));
-                      }
+                      const updatedItems = dbMenuItems.map(db =>
+                        db.id === item.id ? { ...db, description: newValue } : db
+                      );
+                      await saveField('menu', 'items', updatedItems);
+                      setDbMenuItems(updatedItems);
+                      setMenuItems(updatedItems.map(adaptMenuItem));
                     }}
                     tag="p"
                     multiline
@@ -472,14 +426,14 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                 )}
 
                 <div className="flex gap-3 mt-auto">
-                   <button 
+                  <button
                     onClick={() => setSelectedItem(item)}
                     className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border-2 border-bakery-sand text-bakery-dark font-sans font-bold text-sm hover:border-bakery-primary hover:bg-bakery-primary hover:text-white transition-all duration-300"
                   >
                     <Eye size={18} />
                     View
                   </button>
-                  <button 
+                  <button
                     onClick={(e) => handleAddClick(item, e)}
                     className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-bakery-dark text-white font-sans font-bold text-sm hover:bg-bakery-accent shadow-md hover:shadow-lg transition-all duration-300"
                   >
@@ -494,48 +448,37 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
             <button
               onClick={async () => {
                 try {
-                  const websiteId = await getWebsiteId();
-                  if (!websiteId) {
-                    alert('No website ID found. Please refresh the page.');
-                    return;
-                  }
-
-                  // Get default category (first category or prompt)
                   const defaultCategoryId = categories.length > 0 ? categories[0].id : null;
                   if (!defaultCategoryId) {
                     alert('Please create a category first before adding products.');
                     return;
                   }
 
-                  // Get the highest display_order
-                  const maxOrder = dbMenuItems.length > 0 
+                  const maxOrder = dbMenuItems.length > 0
                     ? Math.max(...dbMenuItems.map(item => item.display_order || 0))
                     : -1;
 
-                  // Insert new menu item
-                  const { data: newItem, error } = await supabase
-                    .from('menu_items')
-                    .insert({
-                      website_id: websiteId,
-                      category_id: defaultCategoryId,
-                      name: 'New Product',
-                      description: 'Product description',
-                      price: 0,
-                      is_available: true,
-                      is_popular: false,
-                      display_order: maxOrder + 1,
-                      rating: 5,
-                      review_count: 0
-                    } as any)
-                    .select()
-                    .single();
+                  const newItem: DBMenuItem = {
+                    id: crypto.randomUUID(),
+                    website_id: '',
+                    category_id: defaultCategoryId,
+                    name: 'New Product',
+                    description: 'Product description',
+                    price: 0,
+                    is_available: true,
+                    is_popular: false,
+                    display_order: maxOrder + 1,
+                    rating: 5,
+                    review_count: 0,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                  };
 
-                  if (error) throw error;
+                  const updatedItems = [...dbMenuItems, newItem];
+                  await saveField('menu', 'items', updatedItems);
 
-                  // Add to local state
-                  const adaptedItem = adaptMenuItem(newItem as DBMenuItem);
-                  setDbMenuItems([...dbMenuItems, newItem as DBMenuItem]);
-                  setMenuItems([...menuItems, adaptedItem]);
+                  setDbMenuItems(updatedItems);
+                  setMenuItems(updatedItems.map(adaptMenuItem));
                 } catch (error) {
                   console.error('Error adding product:', error);
                   alert('Failed to add product. Please try again.');
@@ -552,7 +495,7 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
 
       </div>
 
-      {/* Product Detail Modal without Animation */}
+      {/* Product Detail Modal */}
       {selectedItem && (
         <div
           onClick={() => setSelectedItem(null)}
@@ -571,13 +514,13 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
 
             <div className="grid md:grid-cols-2">
               <div className="h-64 md:h-full relative">
-                <img 
-                  src={selectedItem.image} 
-                  alt={selectedItem.name} 
+                <img
+                  src={selectedItem.image}
+                  alt={selectedItem.name}
                   className="w-full h-full object-cover"
                 />
                 {isEditing && (
-                  <div 
+                  <div
                     className="absolute bottom-4 left-4 cursor-pointer z-50"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -592,7 +535,7 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                   </div>
                 )}
               </div>
-              
+
               <div className="p-8 flex flex-col justify-center bg-bakery-cream/30">
                 <div className="mb-2">
                   {isEditing ? (
@@ -600,23 +543,16 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                       value={selectedItem.category}
                       onChange={async (e) => {
                         const newCategoryId = e.target.value;
-                        const dbItem = dbMenuItems.find(db => db.name === selectedItem.name);
-                        if (dbItem) {
-                          try {
-                            await saveField('menu_items', 'category_id', newCategoryId, dbItem.id);
-                            // Update local state
-                            setDbMenuItems(dbMenuItems.map(db => 
-                              db.id === dbItem.id ? { ...db, category_id: newCategoryId } : db
-                            ));
-                            setSelectedItem({ ...selectedItem, category: newCategoryId as any });
-                            setMenuItems(menuItems.map(i => 
-                              i.id === selectedItem.id ? { ...i, category: newCategoryId as any } : i
-                            ));
-                          } catch (error) {
-                            console.error('Error updating category:', error);
-                            alert('Failed to update category. Please try again.');
-                          }
-                        }
+                        const updatedItems = dbMenuItems.map(db =>
+                          db.id === selectedItem.id ? { ...db, category_id: newCategoryId } : db
+                        );
+                        await saveField('menu', 'items', updatedItems);
+                        setDbMenuItems(updatedItems);
+                        // Convert active item back to UI format to update state
+                        const updatedItem = { ...selectedItem, category: newCategoryId as any };
+                        setSelectedItem(updatedItem);
+                        // Also update list
+                        setMenuItems(updatedItems.map(adaptMenuItem));
                       }}
                       className="inline-block px-3 py-1 bg-bakery-primary/10 text-bakery-primary text-xs font-bold uppercase tracking-wider rounded-full mb-3 border-2 border-blue-500 cursor-pointer"
                       onClick={(e) => e.stopPropagation()}
@@ -637,29 +573,22 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                   </h3>
                   <div className="flex items-center gap-1 text-bakery-accent mb-4">
                     {[1, 2, 3, 4, 5].map((s) => (
-                      <Star 
-                        key={s} 
-                        size={16} 
+                      <Star
+                        key={s}
+                        size={16}
                         fill={s <= (selectedItem.rating || 5) ? "currentColor" : "none"}
                         stroke={s <= (selectedItem.rating || 5) ? "currentColor" : "currentColor"}
                         strokeWidth={s <= (selectedItem.rating || 5) ? 0 : 1.5}
                         className={isEditing ? "cursor-pointer" : ""}
                         onClick={isEditing ? async () => {
                           const newRating = s;
-                          const dbItem = dbMenuItems.find(db => db.name === selectedItem.name);
-                          if (dbItem) {
-                            try {
-                              await saveField('menu_items', 'rating', newRating, dbItem.id);
-                              setSelectedItem({ ...selectedItem, rating: newRating });
-                              // Update in menuItems array too
-                              setMenuItems(menuItems.map(item => 
-                                item.id === selectedItem.id ? { ...item, rating: newRating } : item
-                              ));
-                            } catch (error) {
-                              console.error('Error saving rating:', error);
-                              alert('Failed to save rating. Please try again.');
-                            }
-                          }
+                          const updatedItems = dbMenuItems.map(db =>
+                            db.id === selectedItem.id ? { ...db, rating: newRating } : db
+                          );
+                          await saveField('menu', 'items', updatedItems);
+                          setDbMenuItems(updatedItems);
+                          setSelectedItem({ ...selectedItem, rating: newRating });
+                          setMenuItems(updatedItems.map(adaptMenuItem));
                         } : undefined}
                       />
                     ))}
@@ -667,23 +596,15 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                       <EditableText
                         value={`(${selectedItem.review_count || 24} reviews)`}
                         onSave={async (newValue) => {
-                          // Extract number from string like "(24 reviews)"
                           const match = newValue.match(/(\d+)/);
                           const reviewCount = match ? parseInt(match[1], 10) : 24;
-                          const dbItem = dbMenuItems.find(db => db.name === selectedItem.name);
-                          if (dbItem) {
-                            try {
-                              await saveField('menu_items', 'review_count', reviewCount, dbItem.id);
-                              setSelectedItem({ ...selectedItem, review_count: reviewCount });
-                              // Update in menuItems array too
-                              setMenuItems(menuItems.map(item => 
-                                item.id === selectedItem.id ? { ...item, review_count: reviewCount } : item
-                              ));
-                            } catch (error) {
-                              console.error('Error saving review count:', error);
-                              alert('Failed to save review count. Please try again.');
-                            }
-                          }
+                          const updatedItems = dbMenuItems.map(db =>
+                            db.id === selectedItem.id ? { ...db, review_count: reviewCount } : db
+                          );
+                          await saveField('menu', 'items', updatedItems);
+                          setDbMenuItems(updatedItems);
+                          setSelectedItem({ ...selectedItem, review_count: reviewCount });
+                          setMenuItems(updatedItems.map(adaptMenuItem));
                         }}
                         tag="span"
                         className="text-gray-500 text-sm font-sans ml-2"
@@ -706,7 +627,7 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                   </span>
                 </div>
 
-                <button 
+                <button
                   onClick={() => {
                     addToCart(selectedItem);
                     setSelectedItem(null);

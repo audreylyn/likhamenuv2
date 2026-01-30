@@ -2,20 +2,22 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './src/index.css';
 import App from './App';
-import { initLoadMonitor } from './src/utils/loadMonitor';
 
-// Register Service Worker for performance monitoring and caching
-if ('serviceWorker' in navigator) {
+// Only register Service Worker and Load Monitor in PRODUCTION
+// These add overhead during development and slow down hot reloading
+const isDev = import.meta.env.DEV;
+
+if (!isDev && 'serviceWorker' in navigator) {
   // Check if user has disabled service worker
   const swDisabled = localStorage.getItem('sw_disabled') === 'true';
-  
+
   if (!swDisabled) {
     window.addEventListener('load', () => {
       navigator.serviceWorker
         .register('/sw.js')
         .then((registration) => {
           console.log('[SW] Service Worker registered:', registration.scope);
-          
+
           // Check for updates
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
@@ -38,25 +40,26 @@ if ('serviceWorker' in navigator) {
   }
 }
 
-// Initialize Load Monitor - starts monitoring page load time
-// This will automatically refresh the page if it takes too long to load (like Ctrl+F5)
-// Check if user has disabled auto-refresh
-const loadMonitorEnabled = localStorage.getItem('loadMonitor_disabled') !== 'true';
+// Load Monitor - disabled in development for faster loading
+// In production, this auto-refreshes if page takes too long to load
+if (!isDev) {
+  const loadMonitorEnabled = localStorage.getItem('loadMonitor_disabled') !== 'true';
 
-if (loadMonitorEnabled) {
-  const loadMonitor = initLoadMonitor({
-    timeout: 10000, // 10 seconds timeout - adjust if needed
-    maxRetries: 3, // Maximum 3 auto-refresh attempts
-    retryDelay: 2000, // 2 seconds between retries
-    enabled: true, // Enable auto-refresh on slow load
-  });
+  if (loadMonitorEnabled) {
+    import('./src/utils/loadMonitor').then(({ initLoadMonitor }) => {
+      const loadMonitor = initLoadMonitor({
+        timeout: 10000, // 10 seconds timeout
+        maxRetries: 3, // Maximum 3 auto-refresh attempts
+        retryDelay: 2000, // 2 seconds between retries
+        enabled: true,
+      });
 
-  // Start monitoring immediately
-  loadMonitor.start();
-  
-  // Expose to window for debugging (optional)
-  if (typeof window !== 'undefined') {
-    (window as any).loadMonitor = loadMonitor;
+      loadMonitor.start();
+
+      if (typeof window !== 'undefined') {
+        (window as any).loadMonitor = loadMonitor;
+      }
+    });
   }
 }
 

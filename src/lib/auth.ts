@@ -1,35 +1,41 @@
 /**
  * Authentication Helper Functions
+ * Uses Supabase Auth with user metadata for role management
+ * and assignededitors JSONB in websites table for access control
  */
 
-import { supabase } from './supabase';
-import type { UserProfile } from '../types/auth.types';
+import { supabase } from "./supabase";
+import type { UserProfile } from "../types/auth.types";
 
 /**
- * Get current user profile
+ * Get current user profile from Supabase Auth
+ * Role is stored in user_metadata
  */
 export async function getCurrentUser(): Promise<UserProfile | null> {
   try {
-    // First check if there's an active session (fast, local check)
-    const { data: { session } } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     if (!session) return null;
 
-    // Only query user_profiles if we have an active session
-    const { data: profile, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .single();
+    const user = session.user;
 
-    if (error) {
-      console.error('Error fetching user profile:', error);
-      return null;
-    }
-    
-    return profile as UserProfile;
+    // Build profile from auth user data
+    const profile: UserProfile = {
+      id: user.id,
+      email: user.email || "",
+      full_name: user.user_metadata?.full_name || null,
+      avatar_url: user.user_metadata?.avatar_url || null,
+      role: user.user_metadata?.role || "editor",
+      is_active: true,
+      created_at: user.created_at,
+      updated_at: user.updated_at || user.created_at,
+    };
+
+    return profile;
   } catch (error) {
-    console.error('Error getting current user:', error);
+    console.error("Error getting current user:", error);
     return null;
   }
 }
@@ -39,30 +45,46 @@ export async function getCurrentUser(): Promise<UserProfile | null> {
  */
 export async function isAdmin(): Promise<boolean> {
   const user = await getCurrentUser();
-  return user?.role === 'admin';
+  return user?.role === "admin";
 }
 
 /**
  * Check if user can access a specific website
+ * Uses owner field and assignededitors JSONB array
  */
 export async function canAccessWebsite(websiteId: string): Promise<boolean> {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) return false;
 
-    // Check via database function
-    const { data, error } = await supabase
-      .rpc('can_access_website', {
-        p_user_id: user.id,
-        p_website_id: websiteId
-      });
+    // Check if user is admin (from metadata)
+    if (user.user_metadata?.role === "admin") return true;
 
-    if (error) throw error;
-    
-    return data === true;
+    // Check if user is owner or assigned editor
+    const { data, error } = await supabase
+      .from("websites")
+      .select("owner, assignededitors")
+      .eq("id", websiteId)
+      .single();
+
+    if (error) {
+      console.error("Error checking website access:", error);
+      return false;
+    }
+
+    // Check if owner
+    if (data?.owner === user.id) return true;
+
+    // Check if in assignededitors array (by email)
+    const assignedEditors = (data?.assignededitors as string[]) || [];
+    if (user.email && assignedEditors.includes(user.email)) return true;
+
+    return false;
   } catch (error) {
-    console.error('Error checking website access:', error);
+    console.error("Error checking website access:", error);
     return false;
   }
 }
@@ -72,36 +94,34 @@ export async function canAccessWebsite(websiteId: string): Promise<boolean> {
  */
 export async function getUserWebsites(): Promise<any[]> {
   try {
-    const user = await getCurrentUser();
-    
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) return [];
 
     // Admins get all websites
-    if (user.role === 'admin') {
+    if (user.user_metadata?.role === "admin") {
       const { data, error } = await supabase
-        .from('websites')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
+        .from("websites")
+        .select("*")
+        .order("createdat", { ascending: false });
 
       if (error) throw error;
       return data || [];
     }
 
-    // Editors get only their assigned websites
+    // For non-admins, get websites where they are owner or assigned editor
+    // RLS policies handle this automatically
     const { data, error } = await supabase
-      .from('website_editors')
-      .select(`
-        website:websites (*)
-      `)
-      .eq('user_id', user.id)
-      .eq('is_active', true);
+      .from("websites")
+      .select("*")
+      .order("createdat", { ascending: false });
 
     if (error) throw error;
-    
-    return data?.map((item: any) => item.website).filter(Boolean) || [];
+    return data || [];
   } catch (error) {
-    console.error('Error getting user websites:', error);
+    console.error("Error getting user websites:", error);
     return [];
   }
 }
@@ -110,12 +130,18 @@ export async function getUserWebsites(): Promise<any[]> {
  * Sign in user
  */
 export async function signIn(email: string, password: string) {
+  console.log('signIn called for:', email);
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
-  if (error) throw error;
+  if (error) {
+    console.error('Supabase signIn error:', error);
+    throw error;
+  }
+
+  console.log('signIn success, user:', data.user?.email);
   return data;
 }
 
@@ -128,7 +154,7 @@ export async function signOut() {
 }
 
 /**
- * Log activity
+ * Log activity (simplified - logs to console since we don't have activity_log table)
  */
 export async function logActivity(
   websiteId: string,
@@ -136,24 +162,25 @@ export async function logActivity(
   resource: string,
   resourceId?: string,
   oldValue?: any,
-  newValue?: any
+  newValue?: any,
 ) {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) return;
 
-    await supabase.rpc('log_activity', {
-      p_website_id: websiteId,
-      p_user_id: user.id,
-      p_action: action,
-      p_resource: resource,
-      p_resource_id: resourceId || null,
-      p_old_value: oldValue || null,
-      p_new_value: newValue || null
+    // Log to console since we don't have an activity_log table
+    console.log(`[Activity] ${action} on ${resource}`, {
+      websiteId,
+      userId: user.id,
+      resourceId,
+      oldValue,
+      newValue,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Error logging activity:', error);
+    console.error("Error logging activity:", error);
   }
 }
-

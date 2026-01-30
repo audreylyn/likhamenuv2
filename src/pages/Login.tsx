@@ -3,34 +3,36 @@
  * Authentication for editors and admins
  */
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { Lock, Mail, LogIn, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { Lock, Mail, LogIn, AlertCircle } from "lucide-react";
 
 export const Login: React.FC = () => {
-  useEffect(() => {
-    document.title = 'Login - LikhaSiteWorks';
-  }, []);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [justLoggedIn, setJustLoggedIn] = useState(false);
   const { signIn, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
+  // Set page title
+  useEffect(() => {
+    document.title = "Login - LikhaSiteWorks";
+  }, []);
+
   // Handle redirect after successful login
   useEffect(() => {
     if (justLoggedIn && user && !authLoading) {
-      const from = new URLSearchParams(window.location.search).get('from');
-      
+      const from = new URLSearchParams(window.location.search).get("from");
+
       if (from) {
         navigate(from);
-      } else if (user.role === 'admin') {
-        navigate('/admin');
+      } else if (user.role === "admin") {
+        navigate("/admin");
       } else {
-        navigate('/websites');
+        navigate("/websites");
       }
       setJustLoggedIn(false);
     }
@@ -39,24 +41,36 @@ export const Login: React.FC = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (!authLoading && user) {
-      if (user.role === 'admin') {
-        navigate('/admin');
+      if (user.role === "admin") {
+        navigate("/admin");
       } else {
-        navigate('/websites');
+        navigate("/websites");
       }
     }
   }, [user, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
+      console.log('Attempting login for:', email);
       await signIn(email, password);
+      console.log('Login successful');
       setJustLoggedIn(true);
     } catch (err: any) {
-      setError(err.message || 'Invalid email or password');
+      console.error('Login failed:', err);
+      // Provide more specific error messages
+      if (err.message?.includes('Invalid login credentials')) {
+        setError('Invalid email or password. Please check your credentials.');
+      } else if (err.message?.includes('Email not confirmed')) {
+        setError('Please verify your email address before logging in.');
+      } else if (err.message?.includes('Network')) {
+        setError('Network error. Please check your connection and try again.');
+      } else {
+        setError(err.message || 'Login failed. Please try again.');
+      }
       setLoading(false);
     }
   };
@@ -85,7 +99,10 @@ export const Login: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Email Address
               </label>
               <div className="relative">
@@ -104,7 +121,10 @@ export const Login: React.FC = () => {
 
             {/* Password */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Password
               </label>
               <div className="relative">
@@ -143,13 +163,10 @@ export const Login: React.FC = () => {
 
           {/* Footer */}
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-500">
-              Powered by LikhaSiteWorks
-            </p>
+            <p className="text-sm text-gray-500">Powered by LikhaSiteWorks</p>
           </div>
         </div>
       </div>
     </div>
   );
 };
-

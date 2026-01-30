@@ -1,20 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { ContactFormState, FormErrors } from '../types';
-import { MapPin, Phone, Mail, Clock, Send } from 'lucide-react';
-import { supabase, getWebsiteId } from '../src/lib/supabase';
-import type { ContactInfo } from '../src/types/database.types';
-import { EditableText } from '../src/components/editor/EditableText';
-import { useEditor } from '../src/contexts/EditorContext';
+import React, { useState, useEffect } from "react";
+import { ContactFormState, FormErrors } from "../types";
+import { MapPin, Phone, Mail, Clock, Send } from "lucide-react";
+import { supabase, getWebsiteId } from "../src/lib/supabase";
+import type { ContactInfo } from "../src/types/database.types";
+import { EditableText } from "../src/components/editor/EditableText";
+import { useEditor } from "../src/contexts/EditorContext";
+import { useWebsite } from "../src/contexts/WebsiteContext";
 
 export const Contact: React.FC = () => {
   const [content, setContent] = useState<ContactInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const { isEditing, saveField } = useEditor();
+  const { websiteData, loading: websiteLoading } = useWebsite();
+
   const [formData, setFormData] = useState<ContactFormState>({
-    name: '',
-    email: '',
-    subject: '',
-    message: ''
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -22,57 +25,26 @@ export const Contact: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState(false);
 
   useEffect(() => {
-    fetchContactInfo();
-  }, []);
-
-  const fetchContactInfo = async () => {
-    try {
-      const websiteId = await getWebsiteId();
-      if (!websiteId) {
-        console.warn('No website ID found for contact info');
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('contact_info')
-        .select('*')
-        .eq('website_id', websiteId)
-        .single();
-
-      if (error) {
-        // Don't throw on 406 (not found) - just log and continue
-        if (error.code === 'PGRST116') {
-          console.warn('No contact info found for this website');
-        } else {
-          throw error;
-        }
-        return;
-      }
-      
-      setContent(data as ContactInfo);
-    } catch (error: any) {
-      // Handle network errors gracefully
-      if (error instanceof TypeError || error.message?.includes('fetch') || error.message?.includes('NetworkError')) {
-        console.error('Network error fetching contact info. Supabase may be temporarily unavailable.');
-      } else {
-        console.error('Error fetching contact info:', error);
-      }
-    } finally {
+    if (!websiteLoading && websiteData?.content?.contact) {
+      setContent(websiteData.content.contact as ContactInfo);
+      setLoading(false);
+    } else if (!websiteLoading) {
+      // Handle case where contact data might be missing or default
       setLoading(false);
     }
-  };
+  }, [websiteData, websiteLoading]);
+
 
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
+    if (!formData.name.trim()) newErrors.name = "Name is required";
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
+      newErrors.email = "Email is invalid";
     }
-    if (!formData.subject.trim()) newErrors.subject = 'Subject is required';
-    if (!formData.message.trim()) newErrors.message = 'Message is required';
+    if (!formData.subject.trim()) newErrors.subject = "Subject is required";
+    if (!formData.message.trim()) newErrors.message = "Message is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -84,44 +56,51 @@ export const Contact: React.FC = () => {
       setIsSubmitting(true);
       try {
         const websiteId = await getWebsiteId();
-        
+
+        if (!websiteId) {
+          throw new Error("Website ID not found");
+        }
+
         // Save submission to database
-        const { error } = await supabase
-          .from('contact_submissions')
-          .insert({
-            website_id: websiteId,
-            name: formData.name,
-            email: formData.email,
-            subject: formData.subject,
-            message: formData.message,
-            status: 'new'
-          });
+        const { error } = await supabase.from("contact_submissions").insert({
+          website_id: websiteId,
+          name: formData.name,
+          email: formData.email,
+          subject: formData.subject,
+          message: formData.message,
+          status: "new",
+        } as any);
 
         if (error) throw error;
 
         setIsSuccess(true);
-        setFormData({ name: '', email: '', subject: '', message: '' });
+        setFormData({ name: "", email: "", subject: "", message: "" });
         setTimeout(() => setIsSuccess(false), 5000);
       } catch (error) {
-        console.error('Error submitting contact form:', error);
+        console.error("Error submitting contact form:", error);
       } finally {
         setIsSubmitting(false);
       }
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
     // Clear error when user types
     if (errors[name as keyof FormErrors]) {
-      setErrors(prev => ({ ...prev, [name]: undefined }));
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
   };
 
   if (loading) {
     return (
-      <section id="contact" className="py-20 bg-white flex items-center justify-center min-h-[400px]">
+      <section
+        id="contact"
+        className="py-20 bg-white flex items-center justify-center min-h-[400px]"
+      >
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bakery-primary mx-auto mb-4"></div>
           <p className="font-sans text-gray-600">Loading...</p>
@@ -136,7 +115,6 @@ export const Contact: React.FC = () => {
     <section id="contact" className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-          
           {/* Info Side */}
           <div className="space-y-8">
             <div>
@@ -144,7 +122,7 @@ export const Contact: React.FC = () => {
                 <EditableText
                   value={content.heading}
                   onSave={async (newValue) => {
-                    await saveField('contact_info', 'heading', newValue, content.id);
+                    await saveField("contact", "heading", newValue);
                     setContent({ ...content, heading: newValue });
                   }}
                   tag="h2"
@@ -155,12 +133,16 @@ export const Contact: React.FC = () => {
                   {content.heading}
                 </h2>
               )}
-              {content.subheading && (
-                isEditing ? (
+              {content.subheading &&
+                (isEditing ? (
                   <EditableText
                     value={content.subheading}
                     onSave={async (newValue) => {
-                      await saveField('contact_info', 'subheading', newValue, content.id);
+                      await saveField(
+                        "contact",
+                        "subheading",
+                        newValue,
+                      );
                       setContent({ ...content, subheading: newValue });
                     }}
                     tag="p"
@@ -171,8 +153,7 @@ export const Contact: React.FC = () => {
                   <p className="text-lg text-gray-600 font-sans leading-relaxed">
                     {content.subheading}
                   </p>
-                )
-              )}
+                ))}
             </div>
 
             <div className="grid gap-6">
@@ -185,20 +166,26 @@ export const Contact: React.FC = () => {
                     {isEditing ? (
                       <EditableText
                         value="Location"
-                        onSave={async () => {}}
+                        onSave={async () => { }}
                         tag="h3"
                         className="font-serif font-bold text-xl text-bakery-dark"
                       />
                     ) : (
-                      <h3 className="font-serif font-bold text-xl text-bakery-dark">Location</h3>
+                      <h3 className="font-serif font-bold text-xl text-bakery-dark">
+                        Location
+                      </h3>
                     )}
                     <p className="text-gray-600 font-sans">
                       {isEditing ? (
                         <>
                           <EditableText
-                            value={content.address || ''}
+                            value={content.address || ""}
                             onSave={async (newValue) => {
-                              await saveField('contact_info', 'address', newValue, content.id);
+                              await saveField(
+                                "contact",
+                                "address",
+                                newValue,
+                              );
                               setContent({ ...content, address: newValue });
                             }}
                             tag="span"
@@ -208,15 +195,32 @@ export const Contact: React.FC = () => {
                           <EditableText
                             value={`${content.city}, ${content.state} ${content.zip_code}`}
                             onSave={async (newValue) => {
-                              const parts = newValue.split(', ');
+                              const parts = newValue.split(", ");
                               const city = parts[0];
-                              const stateZip = parts[1]?.split(' ') || [];
-                              const state = stateZip[0] || '';
-                              const zip = stateZip[1] || '';
-                              await saveField('contact_info', 'city', city, content.id);
-                              await saveField('contact_info', 'state', state, content.id);
-                              await saveField('contact_info', 'zip_code', zip, content.id);
-                              setContent({ ...content, city, state, zip_code: zip });
+                              const stateZip = parts[1]?.split(" ") || [];
+                              const state = stateZip[0] || "";
+                              const zip = stateZip[1] || "";
+                              await saveField(
+                                "contact",
+                                "city",
+                                city,
+                              );
+                              await saveField(
+                                "contact",
+                                "state",
+                                state,
+                              );
+                              await saveField(
+                                "contact",
+                                "zip_code",
+                                zip,
+                              );
+                              setContent({
+                                ...content,
+                                city,
+                                state,
+                                zip_code: zip,
+                              });
                             }}
                             tag="span"
                             className="text-gray-600 font-sans"
@@ -224,7 +228,8 @@ export const Contact: React.FC = () => {
                         </>
                       ) : (
                         <>
-                          {content.address}<br />
+                          {content.address}
+                          <br />
                           {content.city}, {content.state} {content.zip_code}
                         </>
                       )}
@@ -238,8 +243,14 @@ export const Contact: React.FC = () => {
                   <Clock size={24} />
                 </div>
                 <div>
-                  <h3 className="font-serif font-bold text-xl text-bakery-dark">Hours</h3>
-                  <p className="text-gray-600 font-sans">Mon - Fri: 7:00 AM - 7:00 PM<br />Sat - Sun: 8:00 AM - 5:00 PM</p>
+                  <h3 className="font-serif font-bold text-xl text-bakery-dark">
+                    Hours
+                  </h3>
+                  <p className="text-gray-600 font-sans">
+                    Mon - Fri: 7:00 AM - 7:00 PM
+                    <br />
+                    Sat - Sun: 8:00 AM - 5:00 PM
+                  </p>
                 </div>
               </div>
 
@@ -252,12 +263,14 @@ export const Contact: React.FC = () => {
                     {isEditing ? (
                       <EditableText
                         value="Contact"
-                        onSave={async () => {}}
+                        onSave={async () => { }}
                         tag="h3"
                         className="font-serif font-bold text-xl text-bakery-dark"
                       />
                     ) : (
-                      <h3 className="font-serif font-bold text-xl text-bakery-dark">Contact</h3>
+                      <h3 className="font-serif font-bold text-xl text-bakery-dark">
+                        Contact
+                      </h3>
                     )}
                     <p className="text-gray-600 font-sans">
                       {isEditing ? (
@@ -267,7 +280,11 @@ export const Contact: React.FC = () => {
                               <EditableText
                                 value={content.phone}
                                 onSave={async (newValue) => {
-                                  await saveField('contact_info', 'phone', newValue, content.id);
+                                  await saveField(
+                                    "contact",
+                                    "phone",
+                                    newValue,
+                                  );
                                   setContent({ ...content, phone: newValue });
                                 }}
                                 tag="span"
@@ -277,9 +294,13 @@ export const Contact: React.FC = () => {
                             </>
                           )}
                           <EditableText
-                            value={content.email || ''}
+                            value={content.email || ""}
                             onSave={async (newValue) => {
-                              await saveField('contact_info', 'email', newValue, content.id);
+                              await saveField(
+                                "contact",
+                                "email",
+                                newValue,
+                              );
                               setContent({ ...content, email: newValue });
                             }}
                             tag="span"
@@ -288,7 +309,12 @@ export const Contact: React.FC = () => {
                         </>
                       ) : (
                         <>
-                          {content.phone && <>{content.phone}<br /></>}
+                          {content.phone && (
+                            <>
+                              {content.phone}
+                              <br />
+                            </>
+                          )}
                           {content.email}
                         </>
                       )}
@@ -301,97 +327,132 @@ export const Contact: React.FC = () => {
 
           {/* Form Side */}
           <div className="bg-bakery-cream p-8 md:p-10 rounded-2xl shadow-lg border border-bakery-sand">
-            <h3 className="font-serif text-3xl font-bold text-bakery-dark mb-6">Send a Message</h3>
-            
+            <h3 className="font-serif text-3xl font-bold text-bakery-dark mb-6">
+              Send a Message
+            </h3>
+
             {isSuccess && (
               <div className="mb-6 p-4 bg-green-100 text-green-800 rounded-lg border border-green-200 flex items-center">
-                <span className="font-sans font-medium">Thank you! Your message has been sent.</span>
+                <span className="font-sans font-medium">
+                  Thank you! Your message has been sent.
+                </span>
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label htmlFor="name" className="block text-sm font-bold text-bakery-dark mb-1 font-serif">Name</label>
+                  <label
+                    htmlFor="name"
+                    className="block text-sm font-bold text-bakery-dark mb-1 font-serif"
+                  >
+                    Name
+                  </label>
                   <input
                     type="text"
                     id="name"
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    className={`w-full px-4 py-3 rounded-lg border focus:ring-2 focus:outline-none transition-colors ${
-                      errors.name 
-                        ? 'border-red-300 focus:ring-red-200 focus:border-red-400' 
-                        : 'border-bakery-sand focus:ring-bakery-primary/30 focus:border-bakery-primary'
-                    }`}
+                    className={`w-full px-4 py-3 rounded-lg border focus:ring-2 focus:outline-none transition-colors ${errors.name
+                      ? "border-red-300 focus:ring-red-200 focus:border-red-400"
+                      : "border-bakery-sand focus:ring-bakery-primary/30 focus:border-bakery-primary"
+                      }`}
                     placeholder="John Doe"
                   />
-                  {errors.name && <p className="mt-1 text-sm text-red-500 font-sans">{errors.name}</p>}
+                  {errors.name && (
+                    <p className="mt-1 text-sm text-red-500 font-sans">
+                      {errors.name}
+                    </p>
+                  )}
                 </div>
 
                 <div>
-                  <label htmlFor="email" className="block text-sm font-bold text-bakery-dark mb-1 font-serif">Email</label>
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-bold text-bakery-dark mb-1 font-serif"
+                  >
+                    Email
+                  </label>
                   <input
                     type="email"
                     id="email"
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className={`w-full px-4 py-3 rounded-lg border focus:ring-2 focus:outline-none transition-colors ${
-                      errors.email 
-                        ? 'border-red-300 focus:ring-red-200 focus:border-red-400' 
-                        : 'border-bakery-sand focus:ring-bakery-primary/30 focus:border-bakery-primary'
-                    }`}
+                    className={`w-full px-4 py-3 rounded-lg border focus:ring-2 focus:outline-none transition-colors ${errors.email
+                      ? "border-red-300 focus:ring-red-200 focus:border-red-400"
+                      : "border-bakery-sand focus:ring-bakery-primary/30 focus:border-bakery-primary"
+                      }`}
                     placeholder="john@example.com"
                   />
-                  {errors.email && <p className="mt-1 text-sm text-red-500 font-sans">{errors.email}</p>}
+                  {errors.email && (
+                    <p className="mt-1 text-sm text-red-500 font-sans">
+                      {errors.email}
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div>
-                <label htmlFor="subject" className="block text-sm font-bold text-bakery-dark mb-1 font-serif">Subject</label>
+                <label
+                  htmlFor="subject"
+                  className="block text-sm font-bold text-bakery-dark mb-1 font-serif"
+                >
+                  Subject
+                </label>
                 <input
                   type="text"
                   id="subject"
                   name="subject"
                   value={formData.subject}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 rounded-lg border focus:ring-2 focus:outline-none transition-colors ${
-                    errors.subject 
-                      ? 'border-red-300 focus:ring-red-200 focus:border-red-400' 
-                      : 'border-bakery-sand focus:ring-bakery-primary/30 focus:border-bakery-primary'
-                  }`}
+                  className={`w-full px-4 py-3 rounded-lg border focus:ring-2 focus:outline-none transition-colors ${errors.subject
+                    ? "border-red-300 focus:ring-red-200 focus:border-red-400"
+                    : "border-bakery-sand focus:ring-bakery-primary/30 focus:border-bakery-primary"
+                    }`}
                   placeholder="Catering Inquiry"
                 />
-                {errors.subject && <p className="mt-1 text-sm text-red-500 font-sans">{errors.subject}</p>}
+                {errors.subject && (
+                  <p className="mt-1 text-sm text-red-500 font-sans">
+                    {errors.subject}
+                  </p>
+                )}
               </div>
 
               <div>
-                <label htmlFor="message" className="block text-sm font-bold text-bakery-dark mb-1 font-serif">Message</label>
+                <label
+                  htmlFor="message"
+                  className="block text-sm font-bold text-bakery-dark mb-1 font-serif"
+                >
+                  Message
+                </label>
                 <textarea
                   id="message"
                   name="message"
                   rows={4}
                   value={formData.message}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 rounded-lg border focus:ring-2 focus:outline-none transition-colors ${
-                    errors.message 
-                      ? 'border-red-300 focus:ring-red-200 focus:border-red-400' 
-                      : 'border-bakery-sand focus:ring-bakery-primary/30 focus:border-bakery-primary'
-                  }`}
+                  className={`w-full px-4 py-3 rounded-lg border focus:ring-2 focus:outline-none transition-colors ${errors.message
+                    ? "border-red-300 focus:ring-red-200 focus:border-red-400"
+                    : "border-bakery-sand focus:ring-bakery-primary/30 focus:border-bakery-primary"
+                    }`}
                   placeholder="Tell us what you're craving..."
                 />
-                {errors.message && <p className="mt-1 text-sm text-red-500 font-sans">{errors.message}</p>}
+                {errors.message && (
+                  <p className="mt-1 text-sm text-red-500 font-sans">
+                    {errors.message}
+                  </p>
+                )}
               </div>
 
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`w-full py-4 px-6 rounded-lg font-serif font-bold text-white text-lg shadow-md transition-all flex items-center justify-center space-x-2 ${
-                  isSubmitting 
-                    ? 'bg-gray-400 cursor-not-allowed' 
-                    : 'bg-bakery-primary hover:bg-bakery-dark hover:shadow-lg'
-                }`}
+                className={`w-full py-4 px-6 rounded-lg font-serif font-bold text-white text-lg shadow-md transition-all flex items-center justify-center space-x-2 ${isSubmitting
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-bakery-primary hover:bg-bakery-dark hover:shadow-lg"
+                  }`}
               >
                 {isSubmitting ? (
                   <span>Sending...</span>

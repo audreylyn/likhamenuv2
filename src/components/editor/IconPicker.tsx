@@ -1,11 +1,31 @@
 /**
  * Icon Picker Component
  * Visual icon selector using Lucide React icons
+ * OPTIMIZED: Only imports specific icons to reduce bundle size
  */
 
 import React, { useState } from 'react';
-import { X, Search } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
+import {
+  X, Search,
+  // Common icons for bakery/food websites - only import what we need
+  Heart, Wheat, Clock, Award, CheckCircle, Users, Leaf,
+  ChefHat, Star, Shield, Sparkles, Flame, Coffee, Cake,
+  Cookie, Utensils, ShoppingBag, Truck, MapPin, Phone, Mail,
+  Instagram, Facebook, Twitter, Linkedin, Youtube, Gift,
+  Ribbon, Crown, Zap, Target, TrendingUp, ThumbsUp, Smile,
+  Sun, Moon, Cloud, Droplets, Flower2, TreeDeciduous, Mountain
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+
+// Create a map of available icons (only the ones we imported)
+const iconMap: Record<string, LucideIcon> = {
+  Heart, Wheat, Clock, Award, CheckCircle, Users, Leaf,
+  ChefHat, Star, Shield, Sparkles, Flame, Coffee, Cake,
+  Cookie, Utensils, ShoppingBag, Truck, MapPin, Phone, Mail,
+  Instagram, Facebook, Twitter, Linkedin, Youtube, Gift,
+  Ribbon, Crown, Zap, Target, TrendingUp, ThumbsUp, Smile,
+  Sun, Moon, Cloud, Droplets, Flower2, TreeDeciduous, Mountain
+};
 
 interface IconPickerProps {
   isOpen: boolean;
@@ -15,15 +35,8 @@ interface IconPickerProps {
   availableIcons?: string[];
 }
 
-// Common icons for bakery/food websites
-const commonIcons = [
-  'Heart', 'Wheat', 'Clock', 'Award', 'CheckCircle', 'Users', 'Leaf',
-  'ChefHat', 'Star', 'Shield', 'Sparkles', 'Flame', 'Coffee', 'Cake',
-  'Cookie', 'Utensils', 'ShoppingBag', 'Truck', 'MapPin', 'Phone', 'Mail',
-  'Instagram', 'Facebook', 'Twitter', 'Linkedin', 'Youtube', 'Gift',
-  'Ribbon', 'Crown', 'Zap', 'Target', 'TrendingUp', 'ThumbsUp', 'Smile',
-  'Sun', 'Moon', 'Cloud', 'Droplet', 'Flower', 'Tree', 'Mountain'
-];
+// Common icons for bakery/food websites (must match iconMap keys)
+const commonIcons = Object.keys(iconMap);
 
 export const IconPicker: React.FC<IconPickerProps> = ({
   isOpen,
@@ -87,34 +100,32 @@ export const IconPicker: React.FC<IconPickerProps> = ({
         <div className="flex-1 overflow-y-auto p-6">
           <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-4">
             {filteredIcons.map((iconName) => {
-              // Get icon component from Lucide
-              const IconComponent = (LucideIcons as any)[iconName];
-              
+              // Get icon component from our imported icon map
+              const IconComponent = iconMap[iconName];
+
               if (!IconComponent) return null;
 
               const iconKey = iconName
                 .replace(/([A-Z])/g, '-$1')
                 .toLowerCase()
                 .replace(/^-/, '');
-              
+
               const isSelected = currentIcon?.toLowerCase() === iconKey.toLowerCase();
 
               return (
                 <button
                   key={iconName}
                   onClick={() => handleIconClick(iconName)}
-                  className={`p-4 rounded-lg border-2 transition-all hover:scale-110 ${
-                    isSelected
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
-                  }`}
+                  className={`p-4 rounded-lg border-2 transition-all hover:scale-110 ${isSelected
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                    }`}
                   title={iconName}
                 >
                   <IconComponent
                     size={24}
-                    className={`mx-auto ${
-                      isSelected ? 'text-blue-600' : 'text-gray-700'
-                    }`}
+                    className={`mx-auto ${isSelected ? 'text-blue-600' : 'text-gray-700'
+                      }`}
                   />
                 </button>
               );

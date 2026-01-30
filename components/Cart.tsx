@@ -2,24 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { X, Trash2, Plus, Minus, Send, ShoppingCart } from 'lucide-react';
 import { CartItem } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase, getWebsiteId } from '../src/lib/supabase';
+import { useWebsite } from '../src/contexts/WebsiteContext';
 
 interface CartProps {
   isOpen: boolean;
   onClose: () => void;
   items: CartItem[];
-  onRemove: (id: number) => void;
-  onUpdateQuantity: (id: number, delta: number) => void;
+  onRemove: (id: string | number) => void;
+  onUpdateQuantity: (id: string | number, delta: number) => void;
   onClear: () => void;
 }
 
-export const Cart: React.FC<CartProps> = ({ 
-  isOpen, 
-  onClose, 
-  items, 
-  onRemove, 
+export const Cart: React.FC<CartProps> = ({
+  isOpen,
+  onClose,
+  items,
+  onRemove,
   onUpdateQuantity,
-  onClear 
+  onClear
 }) => {
   const [customerDetails, setCustomerDetails] = useState({
     name: '',
@@ -27,54 +27,56 @@ export const Cart: React.FC<CartProps> = ({
     message: ''
   });
   const [facebookMessengerId, setFacebookMessengerId] = useState<string | null>(null);
+  const { websiteData } = useWebsite();
 
   const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-  // Load Facebook Messenger ID when cart opens
+  // Load Facebook Messenger ID when cart opens or website data changes
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && websiteData) {
       loadFacebookMessengerId();
     }
-  }, [isOpen]);
+  }, [isOpen, websiteData]);
 
-  const loadFacebookMessengerId = async () => {
-    try {
-      const websiteId = await getWebsiteId();
-      if (!websiteId) return;
+  const loadFacebookMessengerId = () => {
+    if (!websiteData) return;
 
-      const { data, error } = await supabase
-        .from('contact_info')
-        .select('facebook_messenger_id, social_links')
-        .eq('website_id', websiteId)
-        .single();
+    // Try to get Messenger ID from various sources in priority order
+    // 1. Dedicated messenger config
+    const messengerConfig = websiteData.messenger as any;
+    if (messengerConfig?.pageId) {
+      setFacebookMessengerId(messengerConfig.pageId);
+      return;
+    }
 
-      if (!error && data) {
-        // Check both facebook_messenger_id field and social_links.facebook_messenger
-        const messengerId = data.facebook_messenger_id || 
-                           (data.social_links as any)?.facebook_messenger || 
-                           null;
-        setFacebookMessengerId(messengerId);
-      }
-    } catch (error) {
-      console.error('Error loading Facebook Messenger ID:', error);
+    // 2. Contact info social links (custom field logic if exists)
+    const contactContent = websiteData.content?.contact as any;
+    if (contactContent?.social_links?.facebook_messenger) {
+      setFacebookMessengerId(contactContent.social_links.facebook_messenger);
+      return;
     }
   };
 
   const handleCheckout = () => {
-    if (!facebookMessengerId || items.length === 0) return;
+    if (!facebookMessengerId || items.length === 0) {
+      if (!facebookMessengerId) {
+        alert("Facebook Messenger is not configured for this store.");
+      }
+      return;
+    }
 
-    // Construct message for messenger (matching your working format exactly)
+    // Construct message for messenger
     const lines: string[] = [];
     lines.push('New Order Request');
     lines.push('------------------');
     lines.push('Items:');
-    
+
     items.forEach(item => {
       const unit = item.price;
       const subtotal = unit * item.quantity;
       lines.push(`- ${item.name} x${item.quantity} @ ₱${unit} = ₱${subtotal}`);
     });
-    
+
     lines.push('------------------');
     lines.push(`Total: ₱${total}`);
     lines.push('');
@@ -84,18 +86,16 @@ export const Cart: React.FC<CartProps> = ({
 
     const fullMessage = lines.join('\n');
     const encodedMessage = encodeURIComponent(fullMessage);
-    
-    // Use exact same format as your working code
+
     // Ensure we always use HTTPS (required for m.me)
     const url = `https://m.me/${facebookMessengerId}?text=${encodedMessage}`;
-    
+
     // Clear cart and close first (before navigation)
     onClear();
     setCustomerDetails({ name: '', location: '', message: '' });
     onClose();
-    
+
     // Small delay to allow cart to close, then open Messenger
-    // Opening in same window avoids Facebook's new window timing issues
     setTimeout(() => {
       window.location.href = url;
     }, 100);
@@ -125,18 +125,18 @@ export const Cart: React.FC<CartProps> = ({
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-serif font-bold text-bakery-dark">Your Cart ({items.reduce((a,c) => a + c.quantity, 0)})</h2>
+                <h2 className="text-2xl font-serif font-bold text-bakery-dark">Your Cart ({items.reduce((a, c) => a + c.quantity, 0)})</h2>
               </div>
               <div className="flex items-center gap-3">
                 {items.length > 0 && (
-                  <button 
+                  <button
                     onClick={onClear}
                     className="text-sm font-sans text-gray-500 hover:text-red-500 transition-colors border border-gray-200 px-3 py-1 rounded hover:border-red-200"
                   >
                     Clear
                   </button>
                 )}
-                <button 
+                <button
                   onClick={onClose}
                   className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500"
                 >
@@ -147,7 +147,7 @@ export const Cart: React.FC<CartProps> = ({
 
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-6">
-              
+
               {/* Items List */}
               {items.length === 0 ? (
                 <div className="bg-gray-50 rounded-lg p-8 text-center border border-gray-100 mb-8">
@@ -158,9 +158,9 @@ export const Cart: React.FC<CartProps> = ({
                 <div className="space-y-4 mb-8">
                   {items.map((item) => (
                     <div key={item.id} className="flex gap-4 p-4 bg-white rounded-xl border border-bakery-sand/30 shadow-sm">
-                      <img 
-                        src={item.image} 
-                        alt={item.name} 
+                      <img
+                        src={item.image}
+                        alt={item.name}
                         className="w-20 h-20 object-cover rounded-lg"
                       />
                       <div className="flex-1">
@@ -169,10 +169,10 @@ export const Cart: React.FC<CartProps> = ({
                           <span className="font-sans font-bold text-bakery-accent">₱{item.price * item.quantity}</span>
                         </div>
                         <p className="text-xs text-gray-500 mb-3 line-clamp-1">{item.description}</p>
-                        
+
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-1">
-                            <button 
+                            <button
                               onClick={() => onUpdateQuantity(item.id, -1)}
                               className="p-1 hover:bg-white rounded shadow-sm transition-all disabled:opacity-50 text-bakery-dark"
                               disabled={item.quantity <= 1}
@@ -180,14 +180,14 @@ export const Cart: React.FC<CartProps> = ({
                               <Minus size={14} />
                             </button>
                             <span className="font-sans font-bold text-sm w-4 text-center">{item.quantity}</span>
-                            <button 
+                            <button
                               onClick={() => onUpdateQuantity(item.id, 1)}
                               className="p-1 hover:bg-white rounded shadow-sm transition-all text-bakery-dark"
                             >
                               <Plus size={14} />
                             </button>
                           </div>
-                          <button 
+                          <button
                             onClick={() => onRemove(item.id)}
                             className="text-gray-400 hover:text-red-500 transition-colors p-1"
                           >
@@ -201,7 +201,7 @@ export const Cart: React.FC<CartProps> = ({
               )}
 
               <div className="border-t border-gray-100 pt-6 space-y-6">
-                
+
                 <h3 className="font-serif text-xl font-bold text-bakery-dark">Order Summary</h3>
 
                 {/* Total */}
@@ -217,18 +217,18 @@ export const Cart: React.FC<CartProps> = ({
                     <input
                       type="text"
                       value={customerDetails.name}
-                      onChange={(e) => setCustomerDetails({...customerDetails, name: e.target.value})}
+                      onChange={(e) => setCustomerDetails({ ...customerDetails, name: e.target.value })}
                       className="w-full px-4 py-2.5 rounded-lg border border-bakery-sand bg-white focus:ring-2 focus:ring-bakery-primary/20 focus:border-bakery-primary outline-none transition-all"
                       placeholder="Enter your name"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-bold text-bakery-dark mb-1.5 font-serif">Location</label>
                     <input
                       type="text"
                       value={customerDetails.location}
-                      onChange={(e) => setCustomerDetails({...customerDetails, location: e.target.value})}
+                      onChange={(e) => setCustomerDetails({ ...customerDetails, location: e.target.value })}
                       className="w-full px-4 py-2.5 rounded-lg border border-bakery-sand bg-white focus:ring-2 focus:ring-bakery-primary/20 focus:border-bakery-primary outline-none transition-all"
                       placeholder="Delivery address"
                     />
@@ -239,7 +239,7 @@ export const Cart: React.FC<CartProps> = ({
                     <textarea
                       rows={3}
                       value={customerDetails.message}
-                      onChange={(e) => setCustomerDetails({...customerDetails, message: e.target.value})}
+                      onChange={(e) => setCustomerDetails({ ...customerDetails, message: e.target.value })}
                       className="w-full px-4 py-2.5 rounded-lg border border-bakery-sand bg-white focus:ring-2 focus:ring-bakery-primary/20 focus:border-bakery-primary outline-none transition-all resize-none"
                       placeholder="Special instructions..."
                     />

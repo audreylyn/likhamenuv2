@@ -1,9 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { Facebook, Instagram, Twitter, Linkedin, Youtube, MessageCircle, Share2, Check, Loader2, X, Plus } from 'lucide-react';
-import { EditableText } from '../src/components/editor/EditableText';
-import { useEditor } from '../src/contexts/EditorContext';
-import { supabase, getWebsiteId } from '../src/lib/supabase';
-import type { FooterContent, NavbarContent } from '../src/types/database.types';
+import React, { useState, useEffect } from "react";
+import {
+  Facebook,
+  Instagram,
+  Twitter,
+  Linkedin,
+  Youtube,
+  MessageCircle,
+  Share2,
+  Check,
+  Loader2,
+  X,
+  Plus,
+} from "lucide-react";
+import { EditableText } from "../src/components/editor/EditableText";
+import { useEditor } from "../src/contexts/EditorContext";
+import { useWebsite } from "../src/contexts/WebsiteContext";
+import type { FooterContent } from "../src/types/database.types";
 
 interface SocialLink {
   id: string;
@@ -13,96 +25,87 @@ interface SocialLink {
 }
 
 export const Footer: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success'>('idle');
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "success">("idle");
   const [loading, setLoading] = useState(true);
-  const [brandName, setBrandName] = useState('');
-  const [aboutText, setAboutText] = useState('');
-  const [quickLinksTitle, setQuickLinksTitle] = useState('Quick Links');
-  const [newsletterTitle, setNewsletterTitle] = useState('Stay in the Loop');
-  const [newsletterDescription, setNewsletterDescription] = useState('Join our newsletter for special offers.');
-  const [copyrightText, setCopyrightText] = useState('');
+  const [brandName, setBrandName] = useState("");
+  const [aboutText, setAboutText] = useState("");
+  const [quickLinksTitle, setQuickLinksTitle] = useState("Quick Links");
+  const [newsletterTitle, setNewsletterTitle] = useState("Stay in the Loop");
+  const [newsletterDescription, setNewsletterDescription] = useState(
+    "Join our newsletter for special offers.",
+  );
+  const [copyrightText, setCopyrightText] = useState("");
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
   const [footerContent, setFooterContent] = useState<FooterContent | null>(null);
   const { isEditing, saveField } = useEditor();
+  const { websiteData, loading: websiteLoading, contentVersion } = useWebsite();
 
   useEffect(() => {
-    loadFooterData();
-  }, []);
+    if (!websiteLoading) {
+      loadFooterData();
+    }
+  }, [websiteData, websiteLoading, contentVersion]);
 
-  const loadFooterData = async () => {
-    try {
-      const websiteId = await getWebsiteId();
-      if (!websiteId) {
-        setLoading(false);
-        return;
+  const loadFooterData = () => {
+    setLoading(false);
+
+    // Safety check - if no websiteData yet, don't crash
+    if (!websiteData?.content) return;
+
+    const navbarData = websiteData.content.navbar;
+    const footerData = websiteData.content.footer;
+    const contactData = websiteData.content.contact;
+    const siteTitle = websiteData.website?.site_title;
+
+    if (navbarData?.brand_name) {
+      setBrandName(navbarData.brand_name);
+    }
+
+    if (footerData) {
+      setFooterContent(footerData);
+      if (footerData.about_text) setAboutText(footerData.about_text);
+      if (footerData.copyright_text) setCopyrightText(footerData.copyright_text);
+      else {
+        // Fallback dynamic copyright if not explicitly saved
+        const websiteName = siteTitle || (navbarData?.brand_name || "Website");
+        setCopyrightText(`© ${new Date().getFullYear()} ${websiteName}. All rights reserved.`);
       }
+    } else {
+      // Defaults
+      setAboutText("Bringing warmth to your day, one pastry at a time. Baked fresh daily with love and the finest ingredients.");
+      const websiteName = siteTitle || (navbarData?.brand_name || "Website");
+      setCopyrightText(`© ${new Date().getFullYear()} ${websiteName}. All rights reserved.`);
+    }
 
-      // Load website data for site title
-      const { data: websiteData, error: websiteError } = await supabase
-        .from('websites')
-        .select('site_title')
-        .eq('id', websiteId)
-        .single();
-      
-      if (websiteError) {
-        console.error('Error loading website data:', websiteError);
-      }
-
-      // Load navbar content for brand name (for display in footer)
-      const { data: navbarData } = await supabase
-        .from('navbar_content')
-        .select('brand_name')
-        .eq('website_id', websiteId)
-        .single();
-
-      // Load footer content
-      const { data: footerData, error: footerError } = await supabase
-        .from('footer_content')
-        .select('*')
-        .eq('website_id', websiteId)
-        .single();
-
-      if (navbarData?.brand_name) {
-        setBrandName(navbarData.brand_name);
-      }
-
-      if (!footerError && footerData) {
-        setFooterContent(footerData);
-        if (footerData.about_text) setAboutText(footerData.about_text);
-        // Always generate copyright text dynamically with current year and correct website name
-        const websiteName = websiteData?.site_title || (navbarData?.brand_name || 'Website');
-        const currentYear = new Date().getFullYear();
-        // Always generate copyright text dynamically to ensure correct website name and year
-        setCopyrightText(`© ${currentYear} ${websiteName}. All rights reserved.`);
-        
-        // Load social links from contact_info
-        const { data: contactData } = await supabase
-          .from('contact_info')
-          .select('social_links')
-          .eq('website_id', websiteId)
-          .single();
-
-        if (contactData && contactData.social_links) {
-          const links: SocialLink[] = [];
-          const socials = contactData.social_links as any;
-          if (socials.instagram) links.push({ id: '1', platform: 'Instagram', url: socials.instagram, icon: <Instagram size={24} /> });
-          if (socials.facebook) links.push({ id: '2', platform: 'Facebook', url: socials.facebook, icon: <Facebook size={24} /> });
-          if (socials.twitter) links.push({ id: '3', platform: 'Twitter', url: socials.twitter, icon: <Twitter size={24} /> });
-          setSocialLinks(links);
-        }
-      } else {
-        // Set defaults only if no data exists
-        if (!footerData) {
-          setAboutText('Bringing warmth to your day, one pastry at a time. Baked fresh daily with love and the finest ingredients.');
-          const websiteName = websiteData?.site_title || (navbarData?.brand_name || 'Website');
-          setCopyrightText(`© ${new Date().getFullYear()} ${websiteName}. All rights reserved.`);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading footer data:', error);
-    } finally {
-      setLoading(false);
+    // Load social links from contact info
+    if (contactData && contactData.social_links) {
+      const links: SocialLink[] = [];
+      const socials = contactData.social_links as any;
+      if (socials.instagram)
+        links.push({
+          id: "1",
+          platform: "Instagram",
+          url: socials.instagram,
+          icon: <Instagram size={24} />,
+        });
+      if (socials.facebook)
+        links.push({
+          id: "2",
+          platform: "Facebook",
+          url: socials.facebook,
+          icon: <Facebook size={24} />,
+        });
+      if (socials.twitter)
+        links.push({
+          id: "3",
+          platform: "Twitter",
+          url: socials.twitter,
+          icon: <Twitter size={24} />,
+        });
+      // We could add more if we map them or store them differently. 
+      // For now this matches original logic.
+      setSocialLinks(links);
     }
   };
 
@@ -110,27 +113,26 @@ export const Footer: React.FC = () => {
     e.preventDefault();
     if (!email) return;
 
-    setStatus('loading');
-    
+    setStatus("loading");
+
     // Simulate API call
     setTimeout(() => {
-      setStatus('success');
-      setEmail('');
+      setStatus("success");
+      setEmail("");
       // Reset back to idle after showing success message for a while (optional)
-      // setTimeout(() => setStatus('idle'), 5000); 
+      // setTimeout(() => setStatus('idle'), 5000);
     }, 1500);
   };
 
   // Don't render footer until data is loaded to prevent flash
-  if (loading || !brandName) {
-    return null;
+  if (loading && !brandName) {
+    return null; // Or a loading spinner
   }
 
   return (
     <footer className="bg-bakery-dark text-bakery-beige pt-16 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
-          
           {/* Brand */}
           <div className="text-center md:text-left">
             {isEditing ? (
@@ -138,23 +140,23 @@ export const Footer: React.FC = () => {
                 value={brandName}
                 onSave={async (newValue) => {
                   setBrandName(newValue);
-                  // Save to navbar_content
-                  const websiteId = await getWebsiteId();
-                  if (websiteId && footerContent) {
-                    await saveField('navbar_content', 'brand_name', newValue);
-                  }
+                  // Save to navbar
+                  await saveField("navbar", "brand_name", newValue);
                 }}
                 tag="h3"
                 className="font-serif text-3xl font-bold text-white mb-4"
               />
             ) : (
-              <h3 className="font-serif text-3xl font-bold text-white mb-4">{brandName}</h3>
+              <h3 className="font-serif text-3xl font-bold text-white mb-4">
+                {brandName}
+              </h3>
             )}
             {isEditing ? (
               <EditableText
                 value={aboutText}
                 onSave={async (newValue) => {
                   setAboutText(newValue);
+                  await saveField("footer", "about_text", newValue);
                 }}
                 tag="p"
                 multiline
@@ -174,18 +176,56 @@ export const Footer: React.FC = () => {
                 value={quickLinksTitle}
                 onSave={async (newValue) => {
                   setQuickLinksTitle(newValue);
+                  // Note: quickLinksTitle is state-only currently, not saved to DB in original code either?
+                  // Should probably be saved to footer config if we want it persistent.
+                  // For now, let's just keep it local state or assume it's hardcoded/not synced in original logic properly.
+                  // Actually original code didn't save it. We can add it to footer content schema later if needed.
                 }}
                 tag="h4"
                 className="font-serif text-xl font-bold text-white mb-6"
               />
             ) : (
-              <h4 className="font-serif text-xl font-bold text-white mb-6">{quickLinksTitle}</h4>
+              <h4 className="font-serif text-xl font-bold text-white mb-6">
+                {quickLinksTitle}
+              </h4>
             )}
             <ul className="space-y-3 font-sans">
-              <li><a href={isEditing ? '#' : '#hero'} onClick={isEditing ? (e) => e.preventDefault() : undefined} className="hover:text-white transition-colors">Home</a></li>
-              <li><a href={isEditing ? '#' : '#menu'} onClick={isEditing ? (e) => e.preventDefault() : undefined} className="hover:text-white transition-colors">Menu</a></li>
-              <li><a href={isEditing ? '#' : '#about'} onClick={isEditing ? (e) => e.preventDefault() : undefined} className="hover:text-white transition-colors">About Us</a></li>
-              <li><a href={isEditing ? '#' : '#contact'} onClick={isEditing ? (e) => e.preventDefault() : undefined} className="hover:text-white transition-colors">Contact</a></li>
+              <li>
+                <a
+                  href={isEditing ? "#" : "#hero"}
+                  onClick={isEditing ? (e) => e.preventDefault() : undefined}
+                  className="hover:text-white transition-colors"
+                >
+                  Home
+                </a>
+              </li>
+              <li>
+                <a
+                  href={isEditing ? "#" : "#menu"}
+                  onClick={isEditing ? (e) => e.preventDefault() : undefined}
+                  className="hover:text-white transition-colors"
+                >
+                  Menu
+                </a>
+              </li>
+              <li>
+                <a
+                  href={isEditing ? "#" : "#about"}
+                  onClick={isEditing ? (e) => e.preventDefault() : undefined}
+                  className="hover:text-white transition-colors"
+                >
+                  About Us
+                </a>
+              </li>
+              <li>
+                <a
+                  href={isEditing ? "#" : "#contact"}
+                  onClick={isEditing ? (e) => e.preventDefault() : undefined}
+                  className="hover:text-white transition-colors"
+                >
+                  Contact
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -196,12 +236,15 @@ export const Footer: React.FC = () => {
                 value={newsletterTitle}
                 onSave={async (newValue) => {
                   setNewsletterTitle(newValue);
+                  await saveField("footer", "newsletter_heading", newValue);
                 }}
                 tag="h4"
                 className="font-serif text-xl font-bold text-white mb-6"
               />
             ) : (
-              <h4 className="font-serif text-xl font-bold text-white mb-6">{newsletterTitle}</h4>
+              <h4 className="font-serif text-xl font-bold text-white mb-6">
+                {newsletterTitle}
+              </h4>
             )}
             <div className="flex flex-col items-center md:items-end gap-4">
               {isEditing ? (
@@ -209,40 +252,56 @@ export const Footer: React.FC = () => {
                   value={newsletterDescription}
                   onSave={async (newValue) => {
                     setNewsletterDescription(newValue);
+                    // Assuming 'newsletter_placeholder' or similar field? 
+                    // Or just no field for description in schema? 
+                    // Valid fields: about_text, copyright_text, footer_columns, show_social_links, show_newsletter, newsletter_heading, newsletter_placeholder
+                    // Let's us newsletter_placeholder for now or skip if not appropriate.
+                    // Actually maybe it's not saved in DB schema?
                   }}
                   tag="p"
                   className="font-sans text-bakery-sand text-sm"
                 />
               ) : (
-                <p className="font-sans text-bakery-sand text-sm">{newsletterDescription}</p>
+                <p className="font-sans text-bakery-sand text-sm">
+                  {newsletterDescription}
+                </p>
               )}
-              
-              {status === 'success' ? (
+
+              {status === "success" ? (
                 <div className="bg-green-500/20 border border-green-500/30 text-green-100 px-4 py-3 rounded-lg w-full max-w-xs flex items-center justify-center gap-2 animate-in fade-in slide-in-from-bottom-2">
                   <Check size={18} />
-                  <span className="font-sans font-medium text-sm">Welcome to the family!</span>
+                  <span className="font-sans font-medium text-sm">
+                    Welcome to the family!
+                  </span>
                 </div>
               ) : (
-                <form onSubmit={handleSubscribe} className="flex w-full max-w-xs relative">
-                  <input 
-                    type="email" 
+                <form
+                  onSubmit={handleSubscribe}
+                  className="flex w-full max-w-xs relative"
+                >
+                  <input
+                    type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Your email" 
-                    disabled={status === 'loading'}
+                    placeholder="Your email"
+                    disabled={status === "loading"}
                     className="bg-white/10 border border-white/20 rounded-l-lg px-4 py-2 text-white placeholder-white/50 focus:outline-none focus:bg-white/20 w-full disabled:opacity-50 transition-colors"
                   />
-                  <button 
+                  <button
                     type="submit"
-                    disabled={status === 'loading'}
+                    disabled={status === "loading"}
                     className="bg-bakery-primary hover:bg-bakery-accent text-white px-4 py-2 rounded-r-lg font-serif font-bold transition-colors disabled:opacity-70 disabled:cursor-not-allowed min-w-[80px] flex justify-center items-center"
                   >
-                    {status === 'loading' ? <Loader2 size={20} className="animate-spin" /> : 'Join'}
+                    {status === "loading" ? (
+                      <Loader2 size={20} className="animate-spin" />
+                    ) : (
+                      "Join"
+                    )}
                   </button>
                 </form>
               )}
-              
+
               <div className="flex flex-wrap items-center gap-3 mt-2">
                 {socialLinks.map((link) => (
                   <div key={link.id} className="relative group">
@@ -250,7 +309,27 @@ export const Footer: React.FC = () => {
                       <button
                         onClick={() => {
                           if (window.confirm(`Delete ${link.platform} link?`)) {
-                            setSocialLinks(socialLinks.filter(l => l.id !== link.id));
+                            const newLinks = socialLinks.filter(
+                              (l) => l.id !== link.id,
+                            );
+                            setSocialLinks(newLinks);
+                            // Update core contact social links
+                            const updatedSocials = { ...websiteData?.content?.contact?.social_links };
+                            // Remove empty/deleted key
+                            // Mapping platform name to key:
+                            const key = link.platform.toLowerCase();
+                            // This is tricky because UI list != fixed schema keys (instagram, facebook, twitter, linkedin, youtube).
+                            // If it's a dynamic list, we might have issues sync back to fixed keys.
+                            // But original code:
+                            /*
+                              if (socials.instagram) links.push(...)
+                              if (socials.facebook) ...
+                            */
+                            // So we should only support deleting/updating known keys.
+                            if (['instagram', 'facebook', 'twitter', 'linkedin', 'youtube'].includes(key)) {
+                              updatedSocials[key] = null; // or empty string?
+                              saveField('contact', 'social_links', updatedSocials);
+                            }
                           }
                         }}
                         className="absolute -top-2 -right-2 z-10 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors shadow-lg opacity-0 group-hover:opacity-100"
@@ -259,23 +338,37 @@ export const Footer: React.FC = () => {
                         <X size={10} />
                       </button>
                     )}
-                    <a 
-                      href={isEditing ? '#' : link.url} 
+                    <a
+                      href={isEditing ? "#" : link.url}
                       target={isEditing ? undefined : "_blank"}
                       rel={isEditing ? undefined : "noopener noreferrer"}
                       onClick={async (e) => {
                         if (isEditing) {
                           e.preventDefault();
-                          const newUrl = prompt(`Enter ${link.platform} URL:`, link.url);
+                          const newUrl = prompt(
+                            `Enter ${link.platform} URL:`,
+                            link.url,
+                          );
                           if (newUrl !== null) {
-                            setSocialLinks(socialLinks.map(l => 
-                              l.id === link.id ? { ...l, url: newUrl } : l
-                            ));
+                            const newLinks = socialLinks.map((l) =>
+                              l.id === link.id ? { ...l, url: newUrl } : l,
+                            );
+                            setSocialLinks(newLinks);
+
+                            const key = link.platform.toLowerCase();
+                            // Update specific social key
+                            const currentSocials = websiteData?.content?.contact?.social_links || {};
+                            const updatedSocials = { ...currentSocials, [key]: newUrl };
+                            await saveField('contact', 'social_links', updatedSocials);
                           }
                         }
                       }}
                       className="text-bakery-sand hover:text-white transition-colors"
-                      title={isEditing ? `Click to edit ${link.platform} URL` : link.platform}
+                      title={
+                        isEditing
+                          ? `Click to edit ${link.platform} URL`
+                          : link.platform
+                      }
                     >
                       {link.icon}
                     </a>
@@ -283,40 +376,68 @@ export const Footer: React.FC = () => {
                 ))}
                 {isEditing && (
                   <button
-                    onClick={() => {
-                      const platform = prompt('Enter platform name (Instagram, Facebook, Twitter, LinkedIn, YouTube, TikTok, Pinterest, WhatsApp, etc.):', '');
+                    onClick={async () => {
+                      const platform = prompt(
+                        "Enter platform name (Instagram, Facebook, Twitter, LinkedIn, YouTube):",
+                        "",
+                      );
                       if (!platform) return;
-                      
+
                       let icon: React.ReactNode;
                       const platformLower = platform.toLowerCase();
-                      if (platformLower.includes('instagram') || platformLower.includes('ig')) {
+                      let key = '';
+
+                      if (
+                        platformLower.includes("instagram") ||
+                        platformLower.includes("ig")
+                      ) {
                         icon = <Instagram size={24} />;
-                      } else if (platformLower.includes('facebook') || platformLower.includes('fb')) {
+                        key = 'instagram';
+                      } else if (
+                        platformLower.includes("facebook") ||
+                        platformLower.includes("fb")
+                      ) {
                         icon = <Facebook size={24} />;
-                      } else if (platformLower.includes('twitter') || platformLower.includes('x')) {
+                        key = 'facebook';
+                      } else if (
+                        platformLower.includes("twitter") ||
+                        platformLower.includes("x")
+                      ) {
                         icon = <Twitter size={24} />;
-                      } else if (platformLower.includes('linkedin') || platformLower.includes('linked')) {
+                        key = 'twitter';
+                      } else if (
+                        platformLower.includes("linkedin") ||
+                        platformLower.includes("linked")
+                      ) {
                         icon = <Linkedin size={24} />;
-                      } else if (platformLower.includes('youtube') || platformLower.includes('yt')) {
+                        key = 'linkedin';
+                      } else if (
+                        platformLower.includes("youtube") ||
+                        platformLower.includes("yt")
+                      ) {
                         icon = <Youtube size={24} />;
-                      } else if (platformLower.includes('tiktok') || platformLower.includes('tt')) {
-                        icon = <MessageCircle size={24} />;
-                      } else if (platformLower.includes('pinterest') || platformLower.includes('pin')) {
-                        icon = <Share2 size={24} />;
-                      } else if (platformLower.includes('whatsapp') || platformLower.includes('wa')) {
-                        icon = <MessageCircle size={24} />;
+                        key = 'youtube';
                       } else {
-                        // Default icon for unknown platforms
-                        icon = <Share2 size={24} />;
+                        // Not supported in strict schema?
+                        alert("Only Instagram, Facebook, Twitter, LinkedIn, and YouTube are supported currently.");
+                        return;
                       }
-                      
+
+                      const url = prompt(`Enter ${platform} URL:`, "https://");
+                      if (!url) return;
+
                       const newLink: SocialLink = {
                         id: Date.now().toString(),
                         platform,
-                        url: '#',
-                        icon
+                        url,
+                        icon,
                       };
                       setSocialLinks([...socialLinks, newLink]);
+
+                      // Save
+                      const currentSocials = websiteData?.content?.contact?.social_links || {};
+                      const updatedSocials = { ...currentSocials, [key]: url };
+                      await saveField('contact', 'social_links', updatedSocials);
                     }}
                     className="text-bakery-sand hover:text-white transition-colors border-2 border-dashed border-bakery-sand/50 rounded p-1 flex items-center justify-center"
                     title="Add social link"
@@ -337,15 +458,16 @@ export const Footer: React.FC = () => {
                   value={copyrightText}
                   onSave={async (newValue) => {
                     setCopyrightText(newValue);
+                    await saveField('footer', 'copyright_text', newValue);
                   }}
                   tag="p"
                   className="text-center"
                 />
                 <p className="text-xs text-bakery-sand/70">
-                  Website by{' '}
-                  <a 
-                    href="https://www.likhasiteworks.studio/" 
-                    target="_blank" 
+                  Website by{" "}
+                  <a
+                    href="https://www.likhasiteworks.studio/"
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-white hover:text-white transition-colors underline"
                     onClick={(e) => e.stopPropagation()}
@@ -356,10 +478,10 @@ export const Footer: React.FC = () => {
               </div>
             ) : (
               <p>
-                {copyrightText} | Website by{' '}
-                <a 
-                  href="https://www.likhasiteworks.studio/" 
-                  target="_blank" 
+                {copyrightText} | Website by{" "}
+                <a
+                  href="https://www.likhasiteworks.studio/"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-white hover:text-white transition-colors underline"
                 >

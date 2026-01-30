@@ -3,10 +3,10 @@
  * Overview statistics and quick actions
  */
 
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
-import { Globe, Plus, ExternalLink, CheckCircle, XCircle } from 'lucide-react';
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { supabase } from "../../lib/supabase";
+import { Globe, Plus, ExternalLink, CheckCircle, XCircle } from "lucide-react";
 
 interface Stats {
   totalWebsites: number;
@@ -32,20 +32,20 @@ export const Dashboard: React.FC = () => {
     try {
       // Get websites count
       const { count: websitesCount } = await supabase
-        .from('websites')
-        .select('*', { count: 'exact', head: true });
+        .from("websites")
+        .select("*", { count: "exact", head: true });
 
-      // Get active websites count
+      // Get published websites count
       const { count: activeCount } = await supabase
-        .from('websites')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_active', true);
+        .from("websites")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "published");
 
-      // Get inactive websites count
+      // Get draft websites count
       const { count: inactiveCount } = await supabase
-        .from('websites')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_active', false);
+        .from("websites")
+        .select("*", { count: "exact", head: true })
+        .neq("status", "published");
 
       setStats({
         totalWebsites: websitesCount || 0,
@@ -54,7 +54,7 @@ export const Dashboard: React.FC = () => {
         totalUsers: 0,
       });
     } catch (error) {
-      console.error('Error loading stats:', error);
+      console.error("Error loading stats:", error);
     } finally {
       setLoading(false);
     }
@@ -78,21 +78,21 @@ export const Dashboard: React.FC = () => {
   const statCards = [
     {
       icon: Globe,
-      label: 'Total Websites',
+      label: "Total Websites",
       value: stats.totalWebsites,
-      color: 'bg-blue-500',
+      color: "bg-blue-500",
     },
     {
       icon: CheckCircle,
-      label: 'Active Sites',
+      label: "Active Sites",
       value: stats.activeWebsites,
-      color: 'bg-green-500',
+      color: "bg-green-500",
     },
     {
       icon: XCircle,
-      label: 'Inactive Sites',
+      label: "Inactive Sites",
       value: stats.inactiveWebsites,
-      color: 'bg-gray-500',
+      color: "bg-gray-500",
     },
   ];
 
@@ -102,7 +102,9 @@ export const Dashboard: React.FC = () => {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600 mt-1">Welcome back! Here's what's happening.</p>
+          <p className="text-gray-600 mt-1">
+            Welcome back! Here's what's happening.
+          </p>
         </div>
         <Link
           to="/admin/websites?new=true"
@@ -116,13 +118,18 @@ export const Dashboard: React.FC = () => {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {statCards.map((stat) => (
-          <div key={stat.label} className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+          <div
+            key={stat.label}
+            className="bg-white rounded-xl shadow-sm p-6 border border-gray-200"
+          >
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">{stat.label}</p>
                 <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
               </div>
-              <div className={`${stat.color} w-12 h-12 rounded-lg flex items-center justify-center text-white`}>
+              <div
+                className={`${stat.color} w-12 h-12 rounded-lg flex items-center justify-center text-white`}
+              >
                 <stat.icon size={24} />
               </div>
             </div>
@@ -138,14 +145,14 @@ export const Dashboard: React.FC = () => {
         >
           <Globe size={32} className="mb-4" />
           <h3 className="text-xl font-bold mb-2">Manage Websites</h3>
-          <p className="text-blue-100 mb-4">Create, edit, and manage all your websites</p>
+          <p className="text-blue-100 mb-4">
+            Create, edit, and manage all your websites
+          </p>
           <div className="flex items-center gap-2 text-sm font-medium group-hover:gap-3 transition-all">
             Go to Websites <ExternalLink size={16} />
           </div>
         </Link>
-
       </div>
     </div>
   );
 };
-
