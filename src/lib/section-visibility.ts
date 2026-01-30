@@ -24,7 +24,7 @@ const ALL_SECTIONS = [
   "specialOffers",
   "faq",
   "contact",
-  "instagram",
+  "instagramFeed",
   "footer",
   "chatSupport",
 ];

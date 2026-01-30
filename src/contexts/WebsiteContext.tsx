@@ -103,7 +103,7 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
       "specialOffers",
       "faq",
       "contact",
-      "instagram",
+      "instagramFeed",
       "footer",
       "chatSupport",
     ];

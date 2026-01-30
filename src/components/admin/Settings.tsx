@@ -3,13 +3,14 @@
  * Global settings and activity logs
  */
 
-import React, { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
-import { Activity, Settings as SettingsIcon } from 'lucide-react';
+import React, { useEffect, useState } from "react";
+import { supabase } from "../../lib/supabase";
+import { Activity, Settings as SettingsIcon } from "lucide-react";
 
 export const Settings: React.FC = () => {
   const [activityLog, setActivityLog] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activityLogEnabled, setActivityLogEnabled] = useState(true);
 
   useEffect(() => {
     loadActivityLog();
@@ -18,15 +19,29 @@ export const Settings: React.FC = () => {
   const loadActivityLog = async () => {
     try {
       const { data, error } = await supabase
-        .from('activity_log')
-        .select('*, user:user_profiles(full_name, email), website:websites(site_title)')
-        .order('created_at', { ascending: false })
+        .from("activity_log")
+        .select(
+          "*, user:user_profiles(full_name, email), website:websites(site_title)",
+        )
+        .order("created_at", { ascending: false })
         .limit(50);
 
-      if (error) throw error;
+      if (error) {
+        // Table doesn't exist - activity logging not enabled
+        if (
+          error.code === "PGRST205" ||
+          error.message?.includes("activity_log")
+        ) {
+          setActivityLogEnabled(false);
+          setActivityLog([]);
+          return;
+        }
+        throw error;
+      }
       setActivityLog(data || []);
     } catch (error) {
-      console.error('Error loading activity log:', error);
+      console.error("Error loading activity log:", error);
+      setActivityLogEnabled(false);
     } finally {
       setLoading(false);
     }
@@ -61,7 +76,9 @@ export const Settings: React.FC = () => {
           <div className="space-y-3">
             <div>
               <p className="text-sm text-gray-600">Platform</p>
-              <p className="text-lg font-semibold text-gray-900">LikhaSiteWorks v1.0</p>
+              <p className="text-lg font-semibold text-gray-900">
+                LikhaSiteWorks v1.0
+              </p>
             </div>
             <div>
               <p className="text-sm text-gray-600">Database</p>
@@ -69,7 +86,9 @@ export const Settings: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">Theme Presets</p>
-              <p className="text-lg font-semibold text-gray-900">5 Professional Themes</p>
+              <p className="text-lg font-semibold text-gray-900">
+                5 Professional Themes
+              </p>
             </div>
           </div>
         </div>
@@ -79,12 +98,22 @@ export const Settings: React.FC = () => {
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center gap-3">
               <Activity size={24} className="text-gray-700" />
-              <h2 className="text-xl font-bold text-gray-900">Recent Activity</h2>
+              <h2 className="text-xl font-bold text-gray-900">
+                Recent Activity
+              </h2>
             </div>
           </div>
 
           <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
-            {activityLog.length === 0 ? (
+            {!activityLogEnabled ? (
+              <div className="p-8 text-center text-gray-500">
+                <Activity size={48} className="mx-auto mb-4 opacity-20" />
+                <p className="font-medium">Activity Logging Not Enabled</p>
+                <p className="text-sm mt-1">
+                  Create the activity_log table to track user actions
+                </p>
+              </div>
+            ) : activityLog.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
                 <Activity size={48} className="mx-auto mb-4 opacity-20" />
                 <p>No activity recorded yet</p>
@@ -94,16 +123,16 @@ export const Settings: React.FC = () => {
                 <div key={log.id} className="p-4 hover:bg-gray-50 transition">
                   <p className="text-sm text-gray-900 mb-1">
                     <span className="font-medium">
-                      {log.user?.full_name || log.user?.email || 'Unknown user'}
-                    </span>
-                    {' '}
-                    <span className="text-gray-600">{log.action}</span>
-                    {' '}
+                      {log.user?.full_name || log.user?.email || "Unknown user"}
+                    </span>{" "}
+                    <span className="text-gray-600">{log.action}</span>{" "}
                     <span className="font-medium">{log.resource}</span>
                     {log.website && (
                       <>
-                        {' on '}
-                        <span className="font-medium">{log.website.site_title}</span>
+                        {" on "}
+                        <span className="font-medium">
+                          {log.website.site_title}
+                        </span>
                       </>
                     )}
                   </p>
@@ -119,4 +148,3 @@ export const Settings: React.FC = () => {
     </div>
   );
 };
-

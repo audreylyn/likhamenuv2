@@ -57,6 +57,11 @@ const SECTION_DEFINITIONS = [
     description: "Social media feed",
   },
   {
+    name: "footer",
+    label: "Footer",
+    description: "Page footer with links",
+  },
+  {
     name: "chatSupport",
     label: "Chat Support",
     description: "Live chat widget",
