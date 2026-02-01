@@ -227,16 +227,41 @@ export const ChatSupport: React.FC = () => {
               ))}
 
               {isTyping && (
-                <div className="flex items-end gap-3 justify-start">
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-end gap-3 justify-start"
+                >
                   <div className="w-8 h-8 rounded-full bg-bakery-primary/10 flex items-center justify-center flex-shrink-0 border border-bakery-primary/20">
                     <Bot size={16} className="text-bakery-primary" />
                   </div>
-                  <div className="bg-bakery-cream text-bakery-text/70 border border-bakery-sand px-4 py-3 rounded-2xl rounded-bl-none text-xs flex gap-1 items-center shadow-sm">
-                    <span className="w-1.5 h-1.5 bg-bakery-text/50 rounded-full animate-bounce"></span>
-                    <span className="w-1.5 h-1.5 bg-bakery-text/50 rounded-full animate-bounce delay-100"></span>
-                    <span className="w-1.5 h-1.5 bg-bakery-text/50 rounded-full animate-bounce delay-200"></span>
+                  <div className="bg-bakery-cream text-bakery-text/70 border border-bakery-sand px-4 py-3 rounded-2xl rounded-bl-none text-xs shadow-sm">
+                    <motion.span
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    >
+                      <span className="font-semibold">Assistant is thinking</span>
+                    </motion.span>
+                    <motion.span
+                      animate={{ opacity: [0, 1, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
+                    >
+                      .
+                    </motion.span>
+                    <motion.span
+                      animate={{ opacity: [0, 1, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.6 }}
+                    >
+                      .
+                    </motion.span>
+                    <motion.span
+                      animate={{ opacity: [0, 1, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.9 }}
+                    >
+                      .
+                    </motion.span>
                   </div>
-                </div>
+                </motion.div>
               )}
               <div ref={messagesEndRef} />
             </div>
