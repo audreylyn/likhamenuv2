@@ -278,6 +278,11 @@ export const WebsiteEditor: React.FC = () => {
 
       if (websiteError) throw websiteError;
 
+      // Clear localStorage cache for this website
+      if (subdomain) {
+        localStorage.removeItem(`likhamenu_website_${subdomain}`);
+      }
+
       alert("Website updated successfully!");
     } catch (error: any) {
       alert(`Error: ${error.message}`);

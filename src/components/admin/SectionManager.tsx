@@ -234,7 +234,13 @@ export const SectionManager: React.FC = () => {
       // Clear cache to refresh visibility
       clearSectionCache();
 
-      alert("Sections updated successfully!");
+      // Also clear localStorage cache for the website
+      const selectedWebsite = websites.find(w => w.id === selectedWebsiteId);
+      if (selectedWebsite?.subdomain) {
+        localStorage.removeItem(`likhamenu_website_${selectedWebsite.subdomain}`);
+      }
+
+      alert("Sections updated successfully! Refresh the public site to see changes.");
     } catch (error: any) {
       console.error("Error saving sections:", error);
       alert(`Error: ${error.message}`);

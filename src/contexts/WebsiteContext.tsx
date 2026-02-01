@@ -17,7 +17,7 @@ import type { WebsiteContextType } from "../types/auth.types";
 
 // Simple cache configuration
 const CACHE_KEY_PREFIX = "likhamenu_website_";
-const CACHE_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
+const CACHE_EXPIRY_MS = 2 * 60 * 1000; // 2 minutes (shorter for faster updates)
 
 interface CachedWebsite {
   data: any;
