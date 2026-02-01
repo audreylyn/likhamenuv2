@@ -293,7 +293,7 @@ export const About: React.FC = () => {
                   { type: "badge", value: "15+", label: "YEARS OF EXPERIENCE" },
                 ];
                 return (
-                  <div className="absolute top-10 -left-6 z-30 bg-bakery-primary text-white p-6 rounded-full shadow-lg flex flex-col items-center justify-center h-28 w-28 text-center animate-bounce-slow transform hover:scale-105 transition-transform">
+                  <div className="absolute top-0 -left-6 z-30 bg-bakery-primary text-white p-6 rounded-full shadow-lg flex flex-col items-center justify-center h-28 w-28 text-center animate-bounce-slow transform hover:scale-105 transition-transform">
                     {isEditing ? (
                       <>
                         <EditableText

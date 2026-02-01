@@ -386,14 +386,14 @@ export const Hero: React.FC = () => {
         <div className="z-20 absolute inset-0 pointer-events-none">
           <button
             onClick={prevSlide}
-            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-3 rounded-full text-white backdrop-blur-sm transition-all pointer-events-auto"
+            className="absolute left-4 top-[60%] -translate-y-1/2 bg-white/20 hover:bg-white/40 p-3 rounded-full text-white backdrop-blur-sm transition-all pointer-events-auto"
             aria-label="Previous slide"
           >
             <ChevronLeft size={32} />
           </button>
           <button
             onClick={nextSlide}
-            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-3 rounded-full text-white backdrop-blur-sm transition-all pointer-events-auto"
+            className="absolute right-4 top-[60%] -translate-y-1/2 bg-white/20 hover:bg-white/40 p-3 rounded-full text-white backdrop-blur-sm transition-all pointer-events-auto"
             aria-label="Next slide"
           >
             <ChevronRight size={32} />

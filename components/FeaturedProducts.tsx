@@ -180,7 +180,7 @@ export const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
     <section id="featuredProducts" className="py-24 bg-bakery-light relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
+        <div className="flex flex-col items-center text-center mb-16 gap-6">
           <div className="max-w-2xl">
             {config.subheading &&
               (isEditing ? (

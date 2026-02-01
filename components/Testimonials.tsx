@@ -296,7 +296,7 @@ export const Testimonials: React.FC = () => {
               <button
                 onClick={prevSlide}
                 disabled={index === 0}
-                className={`absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 md:-translate-x-12 bg-white/10 hover:bg-white/20 text-white p-3 rounded-full backdrop-blur-md transition-all disabled:opacity-30 disabled:cursor-not-allowed z-20 ${index === 0 ? 'hidden' : 'block'}`}
+                className={`absolute left-0 top-[60%] -translate-y-1/2 -translate-x-4 md:-translate-x-12 bg-white/10 hover:bg-white/20 text-white p-3 rounded-full backdrop-blur-md transition-all disabled:opacity-30 disabled:cursor-not-allowed z-20 ${index === 0 ? 'hidden' : 'block'}`}
                 aria-label="Previous testimonials"
               >
                 <ChevronLeft size={24} />
@@ -305,7 +305,7 @@ export const Testimonials: React.FC = () => {
               <button
                 onClick={nextSlide}
                 disabled={index === maxIndex}
-                className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 md:translate-x-12 bg-white/10 hover:bg-white/20 text-white p-3 rounded-full backdrop-blur-md transition-all disabled:opacity-30 disabled:cursor-not-allowed z-20 ${index === maxIndex ? 'hidden' : 'block'}`}
+                className={`absolute right-0 top-[60%] -translate-y-1/2 translate-x-4 md:translate-x-12 bg-white/10 hover:bg-white/20 text-white p-3 rounded-full backdrop-blur-md transition-all disabled:opacity-30 disabled:cursor-not-allowed z-20 ${index === maxIndex ? 'hidden' : 'block'}`}
                 aria-label="Next testimonials"
               >
                 <ChevronRight size={24} />
