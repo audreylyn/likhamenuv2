@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ContactFormState, FormErrors } from "../types";
 import { MapPin, Phone, Mail, Clock, Send } from "lucide-react";
-import { supabase, getWebsiteId } from "../src/lib/supabase";
-import type { ContactInfo } from "../src/types/database.types";
+import type { ContactInfo, ContactFormConfig } from "../src/types/database.types";
 import { EditableText } from "../src/components/editor/EditableText";
 import { useEditor } from "../src/contexts/EditorContext";
 import { useWebsite } from "../src/contexts/WebsiteContext";
@@ -55,29 +54,43 @@ export const Contact: React.FC = () => {
     if (validate() && content) {
       setIsSubmitting(true);
       try {
-        const websiteId = await getWebsiteId();
+        // Get contact form config from website data
+        const contactFormConfig = websiteData?.contactformconfig as ContactFormConfig | undefined;
+        
+        // Use env variable as fallback if not configured per-website
+        const appsScriptUrl = contactFormConfig?.appsScriptUrl || import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL;
+        const clientId = contactFormConfig?.clientId || "default";
 
-        if (!websiteId) {
-          throw new Error("Website ID not found");
+        if (!appsScriptUrl) {
+          // If Google Apps Script not configured at all, show error
+          console.warn("Contact form not configured. Please set up Google Apps Script integration.");
+          alert("Contact form is not configured. Please contact the website owner.");
+          return;
         }
 
-        // Save submission to database
-        const { error } = await supabase.from("contact_submissions").insert({
-          website_id: websiteId,
-          name: formData.name,
-          email: formData.email,
-          subject: formData.subject,
-          message: formData.message,
-          status: "new",
-        } as any);
+        // Send to Google Apps Script
+        const response = await fetch(appsScriptUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            clientId: clientId,
+            name: formData.name,
+            email: formData.email,
+            type: formData.subject, // Maps to "type" in Apps Script
+            message: formData.message,
+          }),
+          mode: "no-cors", // Google Apps Script requires no-cors mode
+        });
 
-        if (error) throw error;
-
+        // With no-cors, we can't read the response, but if it doesn't throw, it succeeded
         setIsSuccess(true);
         setFormData({ name: "", email: "", subject: "", message: "" });
         setTimeout(() => setIsSuccess(false), 5000);
       } catch (error) {
         console.error("Error submitting contact form:", error);
+        alert("Something went wrong. Please try again later.");
       } finally {
         setIsSubmitting(false);
       }

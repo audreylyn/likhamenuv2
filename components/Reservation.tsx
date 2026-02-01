@@ -63,6 +63,17 @@ export const Reservation: React.FC = () => {
     phone: ''
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [facebookMessengerId, setFacebookMessengerId] = useState<string | null>(null);
+
+  // Load Facebook Messenger ID from website data
+  useEffect(() => {
+    if (websiteData) {
+      const messengerConfig = websiteData.messenger as any;
+      if (messengerConfig?.pageId) {
+        setFacebookMessengerId(messengerConfig.pageId);
+      }
+    }
+  }, [websiteData]);
 
   useEffect(() => {
     if (!websiteLoading && websiteData?.content?.reservation) {
@@ -110,12 +121,38 @@ export const Reservation: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!facebookMessengerId) {
+      alert("Facebook Messenger is not configured for this store. Please contact us directly.");
+      return;
+    }
+
+    // Construct reservation message for Messenger
+    const lines: string[] = [];
+    lines.push('🍰 New Table Reservation');
+    lines.push('------------------');
+    lines.push(`📅 Date: ${form.date}`);
+    lines.push(`🕐 Time: ${form.time}`);
+    lines.push(`👥 Guests: ${form.guests}`);
+    lines.push('------------------');
+    lines.push(`Name: ${form.name}`);
+    lines.push(`Phone: ${form.phone}`);
+    lines.push('');
+    lines.push('Please confirm my reservation. Thank you!');
+
+    const fullMessage = lines.join('\n');
+    const encodedMessage = encodeURIComponent(fullMessage);
+    const url = `https://m.me/${facebookMessengerId}?text=${encodedMessage}`;
+
+    // Show success message briefly
     setIsSubmitted(true);
-    // Reset after 3 seconds for demo
+    
+    // Reset form and redirect to Messenger
     setTimeout(() => {
       setIsSubmitted(false);
       setForm({ date: '', time: '', guests: 2, name: '', phone: '' });
-    }, 5000);
+      window.location.href = url;
+    }, 1000);
   };
 
   const today = new Date().toISOString().split('T')[0];

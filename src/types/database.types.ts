@@ -489,6 +489,16 @@ export interface ContactSubmission {
 }
 
 // =====================================================
+// CONTACT FORM CONFIG (Google Apps Script Integration)
+// =====================================================
+
+export interface ContactFormConfig {
+  enabled: boolean;
+  appsScriptUrl: string;
+  clientId: string;
+}
+
+// =====================================================
 // INSTAGRAM FEED TYPES
 // =====================================================
 
