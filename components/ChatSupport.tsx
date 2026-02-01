@@ -61,14 +61,16 @@ export const ChatSupport: React.FC = () => {
 
     // Try to get config from websiteData.content.chatSupport
     // Fallback to defaults if not present
-    const chatConfig = (websiteData.content as any)?.chatSupport as ChatSupportConfig;
+    const chatConfig = (websiteData.content as any)?.chatSupport;
 
     if (chatConfig) {
-      setIsEnabled(chatConfig.is_enabled === true);
+      // Support both 'enabled' and legacy 'is_enabled' property names
+      setIsEnabled(chatConfig.enabled === true || chatConfig.is_enabled === true);
 
-      if (chatConfig.greeting_message && messages.length > 0 && messages[0].sender === 'bot') {
+      const greeting = chatConfig.greeting_message;
+      if (greeting && messages.length > 0 && messages[0].sender === 'bot') {
         setMessages(prev => prev.map((msg, idx) =>
-          idx === 0 ? { ...msg, text: chatConfig.greeting_message } : msg
+          idx === 0 ? { ...msg, text: greeting } : msg
         ));
       }
     } else {
