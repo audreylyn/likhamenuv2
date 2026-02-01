@@ -87,10 +87,10 @@ export const InstagramFeed: React.FC = () => {
                     setContent(newContent);
                   }}
                   tag="p"
-                  className="text-gray-600 mt-2"
+                  className="text-bakery-text/80 mt-2"
                 />
               ) : (
-                <p className="text-gray-600 mt-2">{content.subheading}</p>
+                <p className="text-bakery-text/80 mt-2">{content.subheading}</p>
               )
             )}
           </div>

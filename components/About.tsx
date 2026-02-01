@@ -482,10 +482,10 @@ export const About: React.FC = () => {
                 }}
                 tag="p"
                 multiline
-                className="font-sans text-lg text-gray-600 mb-8 leading-relaxed whitespace-pre-line"
+                className="font-sans text-lg text-bakery-text/80 mb-8 leading-relaxed whitespace-pre-line"
               />
             ) : (
-              <p className="font-sans text-lg text-gray-600 mb-8 leading-relaxed whitespace-pre-line">
+              <p className="font-sans text-lg text-bakery-text/80 mb-8 leading-relaxed whitespace-pre-line">
                 {content.description}
               </p>
             )}
