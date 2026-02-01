@@ -19,7 +19,6 @@ const iconMap: Record<string, any> = {
   award: Award,
   leaf: Leaf,
   'chef-hat': ChefHat,
-  chefhat: ChefHat,
   star: Star,
   shield: Shield,
   sparkles: Sparkles,
@@ -29,7 +28,6 @@ const iconMap: Record<string, any> = {
   cookie: Cookie,
   utensils: Utensils,
   'shopping-bag': ShoppingBag,
-  shoppingbag: ShoppingBag,
   truck: Truck,
   gift: Gift,
   ribbon: Ribbon,
@@ -39,11 +37,9 @@ const iconMap: Record<string, any> = {
   'trending-up': TrendingUp,
   trendingup: TrendingUp,
   'thumbs-up': ThumbsUp,
-  thumbsup: ThumbsUp,
   smile: Smile,
   '': Calendar, // Default
 };
-
 interface ReservationFeature {
   icon: string;
   title: string;
@@ -261,17 +257,17 @@ export const Reservation: React.FC = () => {
           </div>
 
           {/* Reservation Form Card */}
-          <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-10">
+          <div className="bg-bakery-light rounded-2xl shadow-2xl p-8 md:p-10 border border-bakery-sand/30">
             {isSubmitted ? (
               <div className="text-center py-16 animate-in fade-in duration-500">
                 <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                   <CheckCircle className="text-green-600" size={40} />
                 </div>
                 <h3 className="font-serif text-3xl font-bold text-bakery-dark mb-4">Reservation Confirmed!</h3>
-                <p className="text-gray-600 font-sans mb-2">
+                <p className="text-bakery-text/80 font-sans mb-2">
                   We look forward to seeing you, <span className="font-bold">{form.name}</span>.
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-bakery-text/70">
                   A confirmation has been sent to your phone.
                 </p>
               </div>
@@ -303,7 +299,7 @@ export const Reservation: React.FC = () => {
                         onChange={(e) => setForm({ ...form, time: e.target.value })}
                         className="w-full px-4 py-3 bg-bakery-cream/30 border border-bakery-sand rounded-lg focus:ring-2 focus:ring-bakery-primary/30 focus:border-bakery-primary outline-none transition-all"
                       />
-                      <Clock className="absolute right-3 top-3 text-gray-400 pointer-events-none" size={18} />
+                      <Clock className="absolute right-3 top-3 text-bakery-sand/70 pointer-events-none" size={18} />
                     </div>
                   </div>
                 </div>

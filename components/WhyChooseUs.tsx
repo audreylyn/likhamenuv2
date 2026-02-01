@@ -125,7 +125,7 @@ export const WhyChooseUs: React.FC = () => {
       >
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bakery-primary mx-auto mb-4"></div>
-          <p className="font-sans text-gray-600">Loading...</p>
+          <p className="font-sans text-bakery-text/80">Loading...</p>
         </div>
       </section>
     );
@@ -211,7 +211,7 @@ export const WhyChooseUs: React.FC = () => {
             return (
               <div
                 key={index}
-                className="bg-white p-10 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-bakery-sand/30 group relative"
+                className="bg-bakery-light p-10 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-bakery-sand/30 group relative"
               >
                 {isEditing && (
                   <button
@@ -286,10 +286,10 @@ export const WhyChooseUs: React.FC = () => {
                     }}
                     tag="p"
                     multiline
-                    className="font-sans text-gray-600 text-center leading-relaxed"
+                    className="font-sans text-bakery-text/80 text-center leading-relaxed"
                   />
                 ) : (
-                  <p className="font-sans text-gray-600 text-center leading-relaxed">
+                  <p className="font-sans text-bakery-text/80 text-center leading-relaxed">
                     {reason.description}
                   </p>
                 )}
@@ -318,7 +318,7 @@ export const WhyChooseUs: React.FC = () => {
                   alert("Failed to add reason. Please try again.");
                 }
               }}
-              className="flex flex-col items-center justify-center gap-2 p-10 border-2 border-dashed border-gray-300 rounded-2xl hover:border-blue-500 hover:bg-blue-50 transition-colors text-gray-500 hover:text-blue-600 bg-white"
+              className="flex flex-col items-center justify-center gap-2 p-10 border-2 border-dashed border-bakery-sand/60 rounded-2xl hover:border-bakery-primary hover:bg-bakery-cream/60 transition-colors text-bakery-text/70 hover:text-bakery-primary bg-bakery-light"
               title="Add new reason"
             >
               <Plus size={32} />

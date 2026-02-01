@@ -58,7 +58,7 @@ export const SpecialOffers: React.FC = () => {
       <section id="specialOffers" className="py-24 bg-bakery-primary/5 relative overflow-hidden flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bakery-primary mx-auto mb-4"></div>
-          <p className="font-sans text-gray-600">Loading...</p>
+          <p className="font-sans text-bakery-text/80">Loading...</p>
         </div>
       </section>
     );

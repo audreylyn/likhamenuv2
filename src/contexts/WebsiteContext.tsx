@@ -222,21 +222,23 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const applyThemeColors = (colors: any) => {
+    console.log('[WebsiteContext] Applying theme colors:', colors);
     const root = document.documentElement;
+    // Map theme colors to CSS variables - handle both new and legacy formats
     root.style.setProperty("--bakery-primary", colors.primary || "#8B4513");
-    root.style.setProperty("--bakery-accent", colors.accent || "#D2691E");
-    root.style.setProperty("--bakery-cream", colors.cream || "#FFF8E7");
-    root.style.setProperty("--bakery-dark", colors.dark || "#5D4037");
+    root.style.setProperty("--bakery-accent", colors.accent || colors.secondary || "#D2691E");
+    root.style.setProperty("--bakery-cream", colors.cream || colors.background || "#FFF8E7");
+    root.style.setProperty("--bakery-dark", colors.dark || colors.text || "#5D4037");
     root.style.setProperty("--bakery-light", colors.light || "#FFFFFF");
-    root.style.setProperty("--bakery-text", colors.text || "#333333");
+    root.style.setProperty("--bakery-text", colors.text || colors.dark || "#333333");
     // Use beige/sand from theme if available, otherwise derive from cream or use defaults
     root.style.setProperty(
       "--bakery-beige",
-      colors.beige || colors.cream || "#F5F5DC",
+      colors.beige || colors.cream || colors.background || "#F5F5DC",
     );
     root.style.setProperty(
       "--bakery-sand",
-      colors.sand || colors.cream || "#E6DCC3",
+      colors.sand || colors.cream || colors.background || "#E6DCC3",
     );
   };
 

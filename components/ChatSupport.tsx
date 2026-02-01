@@ -165,7 +165,7 @@ export const ChatSupport: React.FC = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-28 right-8 w-[90vw] md:w-[400px] h-[600px] max-h-[75vh] bg-white rounded-3xl shadow-2xl z-40 flex flex-col overflow-hidden border border-bakery-sand/50 font-sans"
+            className="fixed bottom-28 right-8 w-[90vw] md:w-[400px] h-[600px] max-h-[75vh] bg-bakery-light rounded-3xl shadow-2xl z-40 flex flex-col overflow-hidden border border-bakery-sand/50 font-sans"
           >
             {/* Header */}
             <div className="bg-bakery-dark p-5 flex items-center gap-4 shadow-lg relative z-10">
@@ -205,7 +205,7 @@ export const ChatSupport: React.FC = () => {
                     <div
                       className={`px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.sender === 'user'
                           ? 'bg-bakery-primary text-white rounded-br-none'
-                          : 'bg-white text-gray-700 border border-bakery-sand rounded-bl-none'
+                          : 'bg-bakery-cream text-bakery-dark border border-bakery-sand rounded-bl-none'
                         }`}
                     >
                       {msg.text}
@@ -229,10 +229,10 @@ export const ChatSupport: React.FC = () => {
                   <div className="w-8 h-8 rounded-full bg-bakery-primary/10 flex items-center justify-center flex-shrink-0 border border-bakery-primary/20">
                     <Bot size={16} className="text-bakery-primary" />
                   </div>
-                  <div className="bg-white text-gray-500 border border-bakery-sand px-4 py-3 rounded-2xl rounded-bl-none text-xs flex gap-1 items-center shadow-sm">
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></span>
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-100"></span>
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-200"></span>
+                  <div className="bg-bakery-cream text-bakery-text/70 border border-bakery-sand px-4 py-3 rounded-2xl rounded-bl-none text-xs flex gap-1 items-center shadow-sm">
+                    <span className="w-1.5 h-1.5 bg-bakery-text/50 rounded-full animate-bounce"></span>
+                    <span className="w-1.5 h-1.5 bg-bakery-text/50 rounded-full animate-bounce delay-100"></span>
+                    <span className="w-1.5 h-1.5 bg-bakery-text/50 rounded-full animate-bounce delay-200"></span>
                   </div>
                 </div>
               )}
@@ -240,14 +240,14 @@ export const ChatSupport: React.FC = () => {
             </div>
 
             {/* Input Area */}
-            <form onSubmit={handleSendMessage} className="p-4 bg-white border-t border-bakery-sand/50 z-10">
+            <form onSubmit={handleSendMessage} className="p-4 bg-bakery-light border-t border-bakery-sand/50 z-10">
               <div className="relative flex items-center">
                 <input
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   placeholder="Write a message..."
-                  className="w-full bg-gray-50 border border-gray-200 rounded-full pl-5 pr-14 py-3 text-sm focus:outline-none focus:border-bakery-primary focus:ring-1 focus:ring-bakery-primary/20 transition-all font-sans placeholder-gray-400"
+                  className="w-full bg-bakery-cream/50 border border-bakery-sand rounded-full pl-5 pr-14 py-3 text-sm focus:outline-none focus:border-bakery-primary focus:ring-1 focus:ring-bakery-primary/20 transition-all font-sans placeholder-bakery-text/50"
                 />
                 <button
                   type="submit"

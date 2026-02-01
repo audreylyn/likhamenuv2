@@ -87,11 +87,11 @@ export const Team: React.FC = () => {
     return (
       <section
         id="team"
-        className="py-24 bg-bakery-cream relative flex items-center justify-center min-h-[400px]"
+        className="py-24 bg-bakery-light relative overflow-hidden flex items-center justify-center min-h-[400px]"
       >
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bakery-primary mx-auto mb-4"></div>
-          <p className="font-sans text-gray-600">Loading...</p>
+          <p className="font-sans text-bakery-text/80">Loading...</p>
         </div>
       </section>
     );

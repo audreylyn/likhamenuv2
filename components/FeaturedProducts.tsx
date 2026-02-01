@@ -137,11 +137,11 @@ export const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
     return (
       <section
         id="featuredProducts"
-        className="py-24 bg-white relative flex items-center justify-center min-h-[400px]"
+        className="py-24 bg-bakery-light relative flex items-center justify-center min-h-[400px]"
       >
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bakery-primary mx-auto mb-4"></div>
-          <p className="font-sans text-gray-600">Loading...</p>
+          <p className="font-sans text-bakery-text/80">Loading...</p>
         </div>
       </section>
     );
@@ -177,7 +177,7 @@ export const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
   };
 
   return (
-    <section id="featuredProducts" className="py-24 bg-white relative">
+    <section id="featuredProducts" className="py-24 bg-bakery-light relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
@@ -242,7 +242,7 @@ export const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
                 />
 
                 {/* Badge */}
-                <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm z-10">
+                <div className="absolute top-4 right-4 bg-bakery-light/95 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm z-10">
                   <Star
                     size={14}
                     className="text-bakery-accent fill-bakery-accent"
@@ -259,9 +259,9 @@ export const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
                     onClick={() => handleImageChange(item)}
                     title="Click to change image"
                   >
-                    <div className="bg-white/95 backdrop-blur-sm rounded-lg px-3 py-1.5 flex items-center gap-2 shadow-lg hover:bg-white transition-colors border-2 border-blue-500">
-                      <ImageIcon size={16} className="text-gray-700" />
-                      <span className="text-gray-700 font-medium text-xs">
+                    <div className="bg-bakery-light/95 backdrop-blur-sm rounded-lg px-3 py-1.5 flex items-center gap-2 shadow-lg hover:bg-bakery-light transition-colors border-2 border-blue-500">
+                      <ImageIcon size={16} className="text-bakery-text" />
+                      <span className="text-bakery-text font-medium text-xs">
                         Change Image
                       </span>
                     </div>
@@ -271,10 +271,10 @@ export const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
                 {/* Hover Overlay & Button */}
                 <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                <div className="absolute inset-x-0 bottom-0 p-6 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+                <div className="absolute inset-x-0 bottom-0 p-6">
                   <button
                     onClick={() => addToCart(item)}
-                    className="w-full bg-white text-bakery-dark font-serif font-bold py-3.5 rounded-xl shadow-lg hover:bg-bakery-primary hover:text-white transition-colors flex items-center justify-center gap-2"
+                    className="w-full bg-bakery-light text-bakery-dark font-serif font-bold py-3.5 rounded-xl shadow-lg hover:bg-bakery-primary hover:text-white transition-colors flex items-center justify-center gap-2"
                   >
                     <ShoppingBag size={18} />
                     Add to Order
@@ -369,10 +369,10 @@ export const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
                     }}
                     tag="p"
                     multiline
-                    className="text-gray-600 font-sans text-sm leading-relaxed line-clamp-2"
+                    className="text-bakery-text/80 font-sans text-sm leading-relaxed line-clamp-2"
                   />
                 ) : (
-                  <p className="text-gray-600 font-sans text-sm leading-relaxed line-clamp-2">
+                  <p className="text-bakery-text/80 font-sans text-sm leading-relaxed line-clamp-2">
                     {item.description}
                   </p>
                 )}

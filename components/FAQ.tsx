@@ -38,10 +38,10 @@ export const FAQ: React.FC = () => {
 
   if (loading) {
     return (
-      <section id="faq" className="py-20 bg-white flex items-center justify-center min-h-[400px]">
+      <section id="faq" className="py-20 bg-bakery-light flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bakery-primary mx-auto mb-4"></div>
-          <p className="font-sans text-gray-600">Loading...</p>
+          <p className="font-sans text-bakery-text/80">Loading...</p>
         </div>
       </section>
     );
@@ -50,7 +50,7 @@ export const FAQ: React.FC = () => {
   if (!config) return null;
 
   return (
-    <section id="faq" className="py-20 bg-white">
+    <section id="faq" className="py-20 bg-bakery-light">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <div className="flex items-center justify-center gap-2 mb-2 text-bakery-primary">
@@ -83,10 +83,10 @@ export const FAQ: React.FC = () => {
                 }}
                 tag="p"
                 multiline
-                className="text-gray-600 mt-2"
+                className="text-bakery-text/80 mt-2"
               />
             ) : (
-              <p className="text-gray-600 mt-2">{config.subheading}</p>
+                <p className="text-bakery-text/80 mt-2">{config.subheading}</p>
             )
           )}
           <div className="w-16 h-1 bg-bakery-sand mx-auto rounded-full mt-4" />
@@ -160,7 +160,7 @@ export const FAQ: React.FC = () => {
                       exit={isEditing ? {} : { height: 0, opacity: 0 }}
                       transition={{ duration: 0.3, ease: "easeInOut" }}
                     >
-                      <div className="p-5 pt-0 text-gray-600 font-sans leading-relaxed border-t border-bakery-sand/20">
+                      <div className="p-5 pt-0 text-bakery-text/80 font-sans leading-relaxed border-t border-bakery-sand/20">
                         {isEditing ? (
                           <EditableText
                             value={faq.answer}
@@ -171,7 +171,7 @@ export const FAQ: React.FC = () => {
                             }}
                             tag="p"
                             multiline
-                            className="text-gray-600 font-sans leading-relaxed"
+                            className="text-bakery-text/80 font-sans leading-relaxed"
                           />
                         ) : (
                           faq.answer
@@ -210,7 +210,7 @@ export const FAQ: React.FC = () => {
                   alert('Failed to add FAQ. Please try again.');
                 }
               }}
-              className="w-full flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-colors text-gray-500 hover:text-blue-600 bg-white"
+              className="w-full flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-bakery-sand/60 rounded-xl hover:border-bakery-primary hover:bg-bakery-cream/60 transition-colors text-bakery-text/70 hover:text-bakery-primary bg-bakery-light"
               title="Add new FAQ"
             >
               <Plus size={24} />

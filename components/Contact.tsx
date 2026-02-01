@@ -99,11 +99,11 @@ export const Contact: React.FC = () => {
     return (
       <section
         id="contact"
-        className="py-20 bg-white flex items-center justify-center min-h-[400px]"
+        className="py-20 bg-bakery-light flex items-center justify-center min-h-[400px]"
       >
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bakery-primary mx-auto mb-4"></div>
-          <p className="font-sans text-gray-600">Loading...</p>
+          <p className="font-sans text-bakery-text/80">Loading...</p>
         </div>
       </section>
     );
@@ -112,7 +112,7 @@ export const Contact: React.FC = () => {
   if (!content) return null;
 
   return (
-    <section id="contact" className="py-20 bg-white">
+    <section id="contact" className="py-20 bg-bakery-light">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
           {/* Info Side */}
@@ -147,10 +147,10 @@ export const Contact: React.FC = () => {
                     }}
                     tag="p"
                     multiline
-                    className="text-lg text-gray-600 font-sans leading-relaxed"
+                    className="text-lg text-bakery-text/80 font-sans leading-relaxed"
                   />
                 ) : (
-                  <p className="text-lg text-gray-600 font-sans leading-relaxed">
+                  <p className="text-lg text-bakery-text/80 font-sans leading-relaxed">
                     {content.subheading}
                   </p>
                 ))}
@@ -175,7 +175,7 @@ export const Contact: React.FC = () => {
                         Location
                       </h3>
                     )}
-                    <p className="text-gray-600 font-sans">
+                    <p className="text-bakery-text/80 font-sans">
                       {isEditing ? (
                         <>
                           <EditableText
@@ -189,7 +189,7 @@ export const Contact: React.FC = () => {
                               setContent({ ...content, address: newValue });
                             }}
                             tag="span"
-                            className="text-gray-600 font-sans"
+                            className="text-bakery-text/80 font-sans"
                           />
                           <br />
                           <EditableText
@@ -223,7 +223,7 @@ export const Contact: React.FC = () => {
                               });
                             }}
                             tag="span"
-                            className="text-gray-600 font-sans"
+                            className="text-bakery-text/80 font-sans"
                           />
                         </>
                       ) : (
@@ -246,7 +246,7 @@ export const Contact: React.FC = () => {
                   <h3 className="font-serif font-bold text-xl text-bakery-dark">
                     Hours
                   </h3>
-                  <p className="text-gray-600 font-sans">
+                  <p className="text-bakery-text/80 font-sans">
                     Mon - Fri: 7:00 AM - 7:00 PM
                     <br />
                     Sat - Sun: 8:00 AM - 5:00 PM
@@ -272,7 +272,7 @@ export const Contact: React.FC = () => {
                         Contact
                       </h3>
                     )}
-                    <p className="text-gray-600 font-sans">
+                    <p className="text-bakery-text/80 font-sans">
                       {isEditing ? (
                         <>
                           {content.phone && (
@@ -288,7 +288,7 @@ export const Contact: React.FC = () => {
                                   setContent({ ...content, phone: newValue });
                                 }}
                                 tag="span"
-                                className="text-gray-600 font-sans"
+                                className="text-bakery-text/80 font-sans"
                               />
                               <br />
                             </>
@@ -304,7 +304,7 @@ export const Contact: React.FC = () => {
                               setContent({ ...content, email: newValue });
                             }}
                             tag="span"
-                            className="text-gray-600 font-sans"
+                            className="text-bakery-text/80 font-sans"
                           />
                         </>
                       ) : (
@@ -450,7 +450,7 @@ export const Contact: React.FC = () => {
                 type="submit"
                 disabled={isSubmitting}
                 className={`w-full py-4 px-6 rounded-lg font-serif font-bold text-white text-lg shadow-md transition-all flex items-center justify-center space-x-2 ${isSubmitting
-                  ? "bg-gray-400 cursor-not-allowed"
+                  ? "bg-bakery-dark/40 cursor-not-allowed"
                   : "bg-bakery-primary hover:bg-bakery-dark hover:shadow-lg"
                   }`}
               >

@@ -123,7 +123,7 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
       <section id="menu" className="py-20 bg-bakery-cream relative flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bakery-primary mx-auto mb-4"></div>
-          <p className="font-sans text-gray-600">Loading...</p>
+          <p className="font-sans text-bakery-text/80">Loading...</p>
         </div>
       </section>
     );
@@ -216,7 +216,7 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                   onClick={() => setActiveCategory(category)}
                   className={`px-6 py-2 rounded-full font-serif font-bold text-lg capitalize transition-all duration-300 relative ${activeCategory === category
                       ? 'bg-bakery-primary text-white shadow-md transform scale-105'
-                      : 'bg-white text-bakery-dark border border-bakery-sand hover:border-bakery-primary hover:text-bakery-primary'
+                      : 'bg-bakery-light text-bakery-dark border border-bakery-sand hover:border-bakery-primary hover:text-bakery-primary'
                     }`}
                 >
                   {isEditing && !isAllCategory && categoryObj ? (
@@ -281,7 +281,7 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
           {filteredItems.map((item) => (
             <div
               key={item.id}
-              className="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col h-full border border-bakery-sand/30"
+              className="group bg-bakery-light rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col h-full border border-bakery-sand/30"
             >
               <div className="relative h-64 overflow-hidden cursor-pointer" onClick={() => !isEditing && setSelectedItem(item)}>
                 <img
@@ -290,7 +290,7 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                   className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out"
                 />
                 {isEditing ? (
-                  <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold font-sans uppercase tracking-wider text-bakery-dark shadow-sm z-10">
+                  <div className="absolute top-4 left-4 bg-bakery-light/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold font-sans uppercase tracking-wider text-bakery-dark shadow-sm z-10">
                     <select
                       value={item.category}
                       onChange={async (e) => {
@@ -313,7 +313,7 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                     </select>
                   </div>
                 ) : (
-                  <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold font-sans uppercase tracking-wider text-bakery-dark shadow-sm z-10">
+                  <div className="absolute top-4 left-4 bg-bakery-light/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold font-sans uppercase tracking-wider text-bakery-dark shadow-sm z-10">
                     {getCategoryNameForItem(item.category)}
                   </div>
                 )}
@@ -326,9 +326,9 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                     }}
                     title="Click to change image"
                   >
-                    <div className="bg-white/95 backdrop-blur-sm rounded-lg px-3 py-1.5 flex items-center gap-2 shadow-lg hover:bg-white transition-colors border-2 border-blue-500">
-                      <ImageIcon size={16} className="text-gray-700" />
-                      <span className="text-gray-700 font-medium text-xs">Change Image</span>
+                    <div className="bg-bakery-light/95 backdrop-blur-sm rounded-lg px-3 py-1.5 flex items-center gap-2 shadow-lg hover:bg-bakery-light transition-colors border-2 border-blue-500">
+                      <ImageIcon size={16} className="text-bakery-text" />
+                      <span className="text-bakery-text font-medium text-xs">Change Image</span>
                     </div>
                   </div>
                 )}
@@ -417,10 +417,10 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                     }}
                     tag="p"
                     multiline
-                    className="text-gray-600 font-sans text-sm leading-relaxed mb-6 flex-grow border-b border-bakery-sand/20 pb-4"
+                    className="text-bakery-text/80 font-sans text-sm leading-relaxed mb-6 flex-grow border-b border-bakery-sand/20 pb-4"
                   />
                 ) : (
-                  <p className="text-gray-600 font-sans text-sm leading-relaxed mb-6 flex-grow border-b border-bakery-sand/20 pb-4">
+                  <p className="text-bakery-text/80 font-sans text-sm leading-relaxed mb-6 flex-grow border-b border-bakery-sand/20 pb-4">
                     {item.description}
                   </p>
                 )}
@@ -484,7 +484,7 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                   alert('Failed to add product. Please try again.');
                 }
               }}
-              className="bg-white rounded-2xl border-2 border-dashed border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-colors flex flex-col items-center justify-center gap-3 p-8 h-full min-h-[400px] text-gray-500 hover:text-blue-600"
+              className="bg-bakery-light rounded-2xl border-2 border-dashed border-bakery-sand/60 hover:border-bakery-primary hover:bg-bakery-cream/60 transition-colors flex flex-col items-center justify-center gap-3 p-8 h-full min-h-[400px] text-bakery-text/70 hover:text-bakery-primary"
               title="Add new product"
             >
               <Plus size={32} />
@@ -503,11 +503,11 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden relative max-h-[90vh] overflow-y-auto"
+            className="bg-bakery-light rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden relative max-h-[90vh] overflow-y-auto"
           >
             <button
               onClick={() => setSelectedItem(null)}
-              className="absolute top-4 right-4 bg-white/80 p-2 rounded-full text-bakery-dark hover:bg-white hover:text-red-500 transition-colors z-10"
+              className="absolute top-4 right-4 bg-bakery-light/80 p-2 rounded-full text-bakery-dark hover:bg-bakery-light hover:text-red-500 transition-colors z-10"
             >
               <X size={24} />
             </button>
@@ -528,9 +528,9 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                     }}
                     title="Click to change image"
                   >
-                    <div className="bg-white/95 backdrop-blur-sm rounded-lg px-3 py-1.5 flex items-center gap-2 shadow-lg hover:bg-white transition-colors border-2 border-blue-500">
-                      <ImageIcon size={16} className="text-gray-700" />
-                      <span className="text-gray-700 font-medium text-xs">Change Image</span>
+                    <div className="bg-bakery-light/95 backdrop-blur-sm rounded-lg px-3 py-1.5 flex items-center gap-2 shadow-lg hover:bg-bakery-light transition-colors border-2 border-blue-500">
+                      <ImageIcon size={16} className="text-bakery-text" />
+                      <span className="text-bakery-text font-medium text-xs">Change Image</span>
                     </div>
                   </div>
                 )}
@@ -607,17 +607,17 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                           setMenuItems(updatedItems.map(adaptMenuItem));
                         }}
                         tag="span"
-                        className="text-gray-500 text-sm font-sans ml-2"
+                            className="text-bakery-text/70 text-sm font-sans ml-2"
                       />
                     ) : (
-                      <span className="text-gray-500 text-sm font-sans ml-2">
+                          <span className="text-bakery-text/70 text-sm font-sans ml-2">
                         ({selectedItem.review_count || 24} reviews)
                       </span>
                     )}
                   </div>
                 </div>
 
-                <p className="text-gray-600 font-sans leading-relaxed mb-6">
+                    <p className="text-bakery-text/80 font-sans leading-relaxed mb-6">
                   {selectedItem.description}
                 </p>
 
