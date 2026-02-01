@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Instagram, Heart, ExternalLink, Image as ImageIcon } from 'lucide-react';
+import { Instagram, Heart, ExternalLink, Image as ImageIcon, Plus } from 'lucide-react';
 import type { InstagramFeedConfig, InstagramFeedItem } from '../src/types/database.types';
 import { EditableText } from '../src/components/editor/EditableText';
 import { useEditor } from '../src/contexts/EditorContext';
@@ -150,8 +150,8 @@ export const InstagramFeed: React.FC = () => {
                     }}
                     title="Click to change image"
                   >
-                    <div className="bg-white/95 backdrop-blur-sm rounded-lg px-2 py-1 flex items-center gap-1 shadow-lg hover:bg-white transition-colors border-2 border-blue-500">
-                      <ImageIcon size={14} className="text-gray-700" />
+                    <div className="bg-bakery-light/95 backdrop-blur-sm rounded-lg px-2 py-1 flex items-center gap-1 shadow-lg hover:bg-bakery-light transition-colors border-2 border-blue-500">
+                      <ImageIcon size={14} className="text-bakery-text" />
                     </div>
                   </div>
                 )}
@@ -205,6 +205,38 @@ export const InstagramFeed: React.FC = () => {
               </div>
             );
           })}
+
+          {/* Add New Post Button (when editing) */}
+          {isEditing && (
+            <button
+              onClick={async () => {
+                const imageUrl = prompt('Enter image URL for new Instagram post:', '');
+                if (imageUrl) {
+                  const newPost: InstagramFeedItem = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    image_url: imageUrl,
+                    post_url: prompt('Enter post URL (optional):', '') || '#',
+                    caption: prompt('Enter caption (optional):', '') || '',
+                    likes: 0,
+                  };
+                  const updatedItems = [...posts, newPost];
+                  try {
+                    await saveField('instagramFeed', 'feed_items', updatedItems);
+                    setContent({ ...content, feed_items: updatedItems });
+                    alert('Post added successfully!');
+                  } catch (error) {
+                    console.error('Error adding post:', error);
+                    alert('Failed to add post. Please try again.');
+                  }
+                }
+              }}
+              className="aspect-square rounded-lg border-2 border-dashed border-bakery-sand/60 hover:border-bakery-primary hover:bg-bakery-cream/60 transition-colors flex flex-col items-center justify-center gap-2 p-4 bg-bakery-light text-bakery-text/70 hover:text-bakery-primary group"
+              title="Add new Instagram post"
+            >
+              <Plus size={28} className="group-hover:scale-110 transition-transform" />
+              <span className="text-xs font-medium text-center">Add Post</span>
+            </button>
+          )}
         </div>
 
         {/* Mobile CTA */}
