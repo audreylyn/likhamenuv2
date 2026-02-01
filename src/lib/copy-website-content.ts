@@ -13,11 +13,15 @@ async function getGoldenCrumbWebsiteId(): Promise<string | null> {
     .from("websites")
     .select("id")
     .eq("subdomain", "golden-crumb")
-    .eq("is_active", true)
-    .single();
+    .maybeSingle();
 
-  if (error || !data) {
+  if (error) {
     console.error("Error finding golden-crumb website:", error);
+    return null;
+  }
+
+  if (!data) {
+    console.error("golden-crumb website not found in database");
     return null;
   }
 

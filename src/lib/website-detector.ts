@@ -73,6 +73,10 @@ export function getSubdomain(hostname: string): string | null {
 /**
  * Get current website ID from subdomain or query parameter
  * OPTIMIZED: Try published first (fast path), auth check only as fallback
+ * 
+ * Access rules:
+ * - Query param (?site=): Works for both draft and published (admin preview)
+ * - Subdomain: Only works for published websites (client access)
  */
 export async function detectWebsiteId(): Promise<string | null> {
   try {
@@ -84,9 +88,12 @@ export async function detectWebsiteId(): Promise<string | null> {
     const hostname = window.location.hostname;
     const params = new URLSearchParams(window.location.search);
 
-    // Get subdomain or site parameter
+    // Check if accessing via query param (for admin preview)
     const siteParam = params.get('site') || params.get('website');
     const subdomain = siteParam || getSubdomain(hostname);
+
+    // Track how we're accessing - query param allows drafts, subdomain does not
+    const isQueryParamAccess = !!siteParam;
 
     if (!subdomain) {
       return null;
@@ -106,24 +113,22 @@ export async function detectWebsiteId(): Promise<string | null> {
       return (publishedData as any).id;
     }
 
-    // SLOW PATH: Published not found - check if user is authenticated for draft access
-    // Only do auth check here (this is the slow part)
-    const user = await getCachedUser();
-
-    if (user) {
-      // User is logged in - try to access any website (including drafts)
-      const { data: userData, error: userError } = await supabase
+    // If accessing via query param, allow draft access (for admin preview)
+    if (isQueryParamAccess) {
+      const { data: draftData, error: draftError } = await supabase
         .from('websites')
         .select('id')
         .eq('subdomain', subdomain)
         .maybeSingle();
 
-      if (userData) {
+      if (draftData) {
         sessionStorage.removeItem('inactive_website');
-        return (userData as any).id;
+        return (draftData as any).id;
       }
-    } else {
-      // Not logged in and published not found - check if inactive
+    }
+
+    // Subdomain access to draft website - mark as inactive
+    if (!isQueryParamAccess) {
       const { data: inactiveWebsite } = await supabase
         .from('websites')
         .select('id, status')

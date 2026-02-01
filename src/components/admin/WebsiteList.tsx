@@ -19,6 +19,7 @@ import {
   Loader,
 } from "lucide-react";
 import { buildWebsiteUrl } from "../../lib/website-detector";
+import { initializeWebsiteContent } from "../../lib/initialize-website-content";
 
 interface Website {
   id: string;
@@ -168,7 +169,7 @@ export const WebsiteList: React.FC = () => {
       // Generate unique ID
       const id = `${newWebsite.subdomain}-${Date.now()}`;
 
-      const { error } = await supabase.from("websites").insert({
+      const { error } = await (supabase.from("websites") as any).insert({
         id: id,
         title: newWebsite.title,
         subdomain: newWebsite.subdomain,
@@ -187,7 +188,21 @@ export const WebsiteList: React.FC = () => {
 
       if (error) throw error;
 
-      alert("Website created successfully!");
+      // Initialize website with sample content from golden-crumb template
+      let contentInitialized = false;
+      try {
+        await initializeWebsiteContent(id, Array.from(enabledSections));
+        contentInitialized = true;
+      } catch (initError) {
+        console.error("Warning: Could not initialize website content:", initError);
+        // Continue anyway - website was created, content can be added later
+      }
+
+      if (contentInitialized) {
+        alert("Website created successfully with sample content!");
+      } else {
+        alert("Website created! Note: Could not auto-populate content - you may need to add content manually or ensure a 'golden-crumb' template website exists.");
+      }
       setNewWebsite({ title: "", subdomain: "", selectedTheme: "warm-bakery" });
       setEnabledSections(new Set(SECTION_DEFINITIONS.map((s) => s.name)));
       loadWebsites();
@@ -202,8 +217,8 @@ export const WebsiteList: React.FC = () => {
     try {
       const newStatus = currentStatus === "published" ? "draft" : "published";
 
-      const { error } = await supabase
-        .from("websites")
+      const { error } = await (supabase
+        .from("websites") as any)
         .update({
           status: newStatus,
           updatedat: new Date().toISOString(),
@@ -329,11 +344,10 @@ export const WebsiteList: React.FC = () => {
                     onClick={() =>
                       setNewWebsite({ ...newWebsite, selectedTheme: theme.id })
                     }
-                    className={`px-4 py-2 rounded-lg border-2 transition ${
-                      newWebsite.selectedTheme === theme.id
-                        ? "border-gray-900 bg-gray-100"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
+                    className={`px-4 py-2 rounded-lg border-2 transition ${newWebsite.selectedTheme === theme.id
+                      ? "border-gray-900 bg-gray-100"
+                      : "border-gray-200 hover:border-gray-300"
+                      }`}
                   >
                     <div className="flex items-center gap-2">
                       <div
@@ -366,11 +380,10 @@ export const WebsiteList: React.FC = () => {
                       }
                       setEnabledSections(newSet);
                     }}
-                    className={`px-3 py-1 rounded-full text-sm transition ${
-                      enabledSections.has(section.name)
-                        ? "bg-green-100 text-green-700 border border-green-300"
-                        : "bg-gray-100 text-gray-600 border border-gray-200"
-                    }`}
+                    className={`px-3 py-1 rounded-full text-sm transition ${enabledSections.has(section.name)
+                      ? "bg-green-100 text-green-700 border border-green-300"
+                      : "bg-gray-100 text-gray-600 border border-gray-200"
+                      }`}
                   >
                     {section.label}
                   </button>
@@ -425,11 +438,10 @@ export const WebsiteList: React.FC = () => {
                   </p>
                 </div>
                 <span
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    website.status === "published"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-gray-100 text-gray-600"
-                  }`}
+                  className={`px-2 py-1 rounded-full text-xs font-medium ${website.status === "published"
+                    ? "bg-green-100 text-green-700"
+                    : "bg-gray-100 text-gray-600"
+                    }`}
                 >
                   {website.status}
                 </span>
