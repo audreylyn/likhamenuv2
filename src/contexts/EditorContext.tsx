@@ -11,6 +11,8 @@ import React, {
   useCallback,
   useRef,
 } from "react";
+import { useWebsite } from "./WebsiteContext";
+
 import { supabase } from "../lib/supabase";
 import { detectWebsiteId } from "../lib/website-detector";
 
@@ -36,19 +38,12 @@ export const EditorProvider: React.FC<{
 }> = ({ children, isEditing: initialEditing }) => {
   const [isEditing, setIsEditing] = useState(initialEditing);
   const [hasChanges, setHasChanges] = useState(false);
+  const { refreshContent } = useWebsite();
 
-  // Debounce save operations - batch rapid changes but save quickly
-  const saveQueue = useRef<
-    Map<string, { section: string; field: string; value: any }>
-  >(new Map());
-  const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // ... refs ...
 
   /**
    * Save a single field within a section to websites.content JSONB
-   * @param section - The section name (e.g., 'navbar', 'hero', 'about')
-   * @param field - The field name within the section
-   * @param value - The value to save
-   * @param recordId - Optional, ignored in JSONB approach but kept for compatibility
    */
   const saveField = useCallback(
     async (
@@ -66,8 +61,8 @@ export const EditorProvider: React.FC<{
         }
 
         // First fetch the current content
-        const { data: websiteData, error: fetchError } = await supabase
-          .from("websites")
+        const { data: websiteData, error: fetchError } = await (supabase
+          .from("websites") as any)
           .select("content")
           .eq("id", websiteId)
           .single();
@@ -88,8 +83,8 @@ export const EditorProvider: React.FC<{
         currentContent[section] = sectionContent;
 
         // Save back to database
-        const { error: updateError } = await supabase
-          .from("websites")
+        const { error: updateError } = await (supabase
+          .from("websites") as any)
           .update({
             content: currentContent,
             updatedat: new Date().toISOString(),
@@ -104,18 +99,19 @@ export const EditorProvider: React.FC<{
 
         console.log(`✅ Saved content.${section}.${field}`);
         setHasChanges(true);
+
+        // Refresh content to invalidate cache and update UI
+        refreshContent();
       } catch (error) {
         console.error(`Error saving ${section}.${field}:`, error);
         throw error;
       }
     },
-    [],
+    [refreshContent],
   );
 
   /**
    * Save entire section content to websites.content JSONB
-   * @param section - The section name (e.g., 'navbar', 'hero', 'about')
-   * @param content - The entire section content object
    */
   const saveSectionContent = useCallback(
     async (section: string, content: any): Promise<void> => {
@@ -126,8 +122,8 @@ export const EditorProvider: React.FC<{
         }
 
         // First fetch the current content
-        const { data: websiteData, error: fetchError } = await supabase
-          .from("websites")
+        const { data: websiteData, error: fetchError } = await (supabase
+          .from("websites") as any)
           .select("content")
           .eq("id", websiteId)
           .single();
@@ -142,8 +138,8 @@ export const EditorProvider: React.FC<{
         currentContent[section] = content;
 
         // Save back to database
-        const { error: updateError } = await supabase
-          .from("websites")
+        const { error: updateError } = await (supabase
+          .from("websites") as any)
           .update({
             content: currentContent,
             updatedat: new Date().toISOString(),
@@ -158,12 +154,15 @@ export const EditorProvider: React.FC<{
 
         console.log(`✅ Saved content.${section}`);
         setHasChanges(true);
+
+        // Refresh content to invalidate cache and update UI
+        refreshContent();
       } catch (error) {
         console.error(`Error saving ${section}:`, error);
         throw error;
       }
     },
-    [],
+    [refreshContent],
   );
 
   const value: EditorContextType = {
@@ -186,11 +185,11 @@ export const useEditor = () => {
   if (context === undefined) {
     return {
       isEditing: false,
-      setIsEditing: () => {},
-      saveField: async () => {},
-      saveSectionContent: async () => {},
+      setIsEditing: () => { },
+      saveField: async () => { },
+      saveSectionContent: async () => { },
       hasChanges: false,
-      setHasChanges: () => {},
+      setHasChanges: () => { },
     };
   }
   return context;
