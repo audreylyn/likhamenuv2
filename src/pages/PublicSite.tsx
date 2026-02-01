@@ -114,9 +114,7 @@ export const PublicSite: React.FC = () => {
   };
 
   const clearCart = () => {
-    if (window.confirm("Are you sure you want to clear your cart?")) {
-      setCartItems([]);
-    }
+    setCartItems([]);
   };
 
   // Show loading state while website is being detected/loaded
