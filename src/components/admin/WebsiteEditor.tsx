@@ -260,7 +260,7 @@ export const WebsiteEditor: React.FC = () => {
       // Update contact form config
       const updatedContactFormConfig = {
         enabled: contactFormEnabled,
-        appsScriptUrl: contactFormAppsScriptUrl || null,
+        appsScriptUrl: null, // Always use env variable
         clientId: contactFormClientId || null,
       };
 
@@ -486,7 +486,7 @@ export const WebsiteEditor: React.FC = () => {
                     Contact Form Email Integration
                   </label>
                   <p className="text-xs text-gray-500">
-                    Enable Google Apps Script to send contact form submissions via email.
+                    Send contact form submissions via Google Apps Script.
                   </p>
                 </div>
                 <button
@@ -506,27 +506,6 @@ export const WebsiteEditor: React.FC = () => {
 
               {contactFormEnabled && (
                 <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-4">
-                  {/* Apps Script URL */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Google Apps Script Web App URL
-                    </label>
-                    <input
-                      type="url"
-                      value={contactFormAppsScriptUrl}
-                      onChange={(e) => setContactFormAppsScriptUrl(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm font-mono"
-                      placeholder="https://script.google.com/macros/s/YOUR-SCRIPT-ID/exec"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Set globally via{" "}
-                      <code className="bg-gray-100 px-1 rounded">
-                        VITE_GOOGLE_APPS_SCRIPT_URL
-                      </code>{" "}
-                      or per-website here.
-                    </p>
-                  </div>
-
                   {/* Client ID */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -537,7 +516,7 @@ export const WebsiteEditor: React.FC = () => {
                       value={contactFormClientId}
                       onChange={(e) => setContactFormClientId(e.target.value)}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      placeholder="salon, bakery, etc."
+                      placeholder="bakery"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       Must match the ClientID in your Google Sheet's "Clients" tab.
@@ -546,26 +525,24 @@ export const WebsiteEditor: React.FC = () => {
 
                   {/* Status Indicator */}
                   <div className={`p-3 rounded-lg border ${
-                    contactFormAppsScriptUrl && contactFormClientId
+                    contactFormClientId
                       ? "bg-green-50 border-green-200"
                       : "bg-yellow-50 border-yellow-200"
                   }`}>
                     <p className={`text-sm ${
-                      contactFormAppsScriptUrl && contactFormClientId
+                      contactFormClientId
                         ? "text-green-800"
                         : "text-yellow-800"
                     }`}>
-                      {contactFormAppsScriptUrl && contactFormClientId ? (
+                      {contactFormClientId ? (
                         <>
-                          <strong>✓ Configuration complete</strong>
-                          <br />
-                          Contact form submissions will be sent to Google Apps Script.
+                          <strong>✓ Configuration complete.</strong> Contact form submissions will be emailed.
                         </>
                       ) : (
                         <>
                           <strong>⚠ Configuration incomplete</strong>
                           <br />
-                          Please provide both the Apps Script URL and Client ID.
+                          Please provide the Client ID.
                         </>
                       )}
                     </p>
@@ -574,7 +551,7 @@ export const WebsiteEditor: React.FC = () => {
                   {/* Setup Guide Link */}
                   <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                     <p className="text-sm text-blue-800">
-                      <strong>📖 Need help?</strong>
+                      <strong>📖 Setup Guide</strong>
                       <br />
                       See{" "}
                       <a
@@ -584,92 +561,7 @@ export const WebsiteEditor: React.FC = () => {
                       >
                         CONTACT_FORM_SETUP.md
                       </a>{" "}
-                      for step-by-step setup instructions.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Contact Form Configuration */}
-            <div className="border-t border-gray-200 pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Contact Form Email Integration
-                  </label>
-                  <p className="text-xs text-gray-500">
-                    Send contact form submissions via Google Apps Script.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setContactFormEnabled(!contactFormEnabled)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    contactFormEnabled ? "bg-blue-600" : "bg-gray-300"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      contactFormEnabled ? "translate-x-6" : "translate-x-1"
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {contactFormEnabled && (
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Google Apps Script Web App URL
-                    </label>
-                    <input
-                      type="url"
-                      value={contactFormAppsScriptUrl}
-                      onChange={(e) => setContactFormAppsScriptUrl(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono"
-                      placeholder="https://script.google.com/macros/s/YOUR-SCRIPT-ID/exec"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Client ID
-                    </label>
-                    <p className="text-xs text-gray-500 mb-2">
-                      Must match the ClientID in your Google Sheet's "Clients" tab.
-                    </p>
-                    <input
-                      type="text"
-                      value={contactFormClientId}
-                      onChange={(e) => setContactFormClientId(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="salon, bakery, rose, etc."
-                    />
-                  </div>
-                  
-                  {/* Status Indicator */}
-                  <div className={`p-3 rounded-lg border ${
-                    contactFormAppsScriptUrl && contactFormClientId 
-                      ? "bg-green-50 border-green-200" 
-                      : "bg-yellow-50 border-yellow-200"
-                  }`}>
-                    <p className={`text-sm ${
-                      contactFormAppsScriptUrl && contactFormClientId 
-                        ? "text-green-800" 
-                        : "text-yellow-800"
-                    }`}>
-                      {contactFormAppsScriptUrl && contactFormClientId 
-                        ? "✅ Configuration complete. Contact form submissions will be emailed."
-                        : "⚠️ Please fill in both URL and Client ID to enable email notifications."
-                      }
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <p className="text-sm text-blue-800">
-                      <strong>📧 Setup Guide</strong>
-                      <br />
-                      See <code className="bg-white px-1 rounded">CONTACT_FORM_SETUP.md</code> for step-by-step instructions on setting up Google Apps Script email integration.
+                      for step-by-step instructions on setting up Google Apps Script email integration.
                     </p>
                   </div>
                 </div>
