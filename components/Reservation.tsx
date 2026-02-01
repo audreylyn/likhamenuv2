@@ -69,8 +69,8 @@ export const Reservation: React.FC = () => {
   useEffect(() => {
     if (websiteData) {
       const messengerConfig = websiteData.messenger as any;
-      if (messengerConfig?.pageId) {
-        setFacebookMessengerId(messengerConfig.pageId);
+      if (messengerConfig?.page_id) {
+        setFacebookMessengerId(messengerConfig.page_id);
       }
     }
   }, [websiteData]);
