@@ -11,6 +11,9 @@ import { ContentGeneratorModal } from './ContentGeneratorModal';
 import { useWebsite } from '../../contexts/WebsiteContext';
 import { getSubdomain } from '../../lib/website-detector';
 
+// Cache key prefix - must match WebsiteContext
+const CACHE_KEY_PREFIX = "likhamenu_website_";
+
 interface EditorLayoutProps {
   children: React.ReactNode;
   isEditing: boolean;
@@ -25,13 +28,30 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
   user,
 }) => {
   const navigate = useNavigate();
-  const { currentWebsite } = useWebsite();
+  const { currentWebsite, websiteData } = useWebsite();
   const [showContentGenerator, setShowContentGenerator] = useState(false);
 
   const handleExitEditor = () => {
     const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
     const isLocalhost = hostname === 'localhost' || hostname.startsWith('127.0.0.1');
     const hasSubdomain = !isLocalhost && getSubdomain(hostname) !== null;
+
+    const params = typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search)
+      : new URLSearchParams();
+    const siteParam = params.get('site') || params.get('website');
+    
+    // Clear the cache for this website to ensure fresh data on next load
+    if (websiteData?.subdomain) {
+      localStorage.removeItem(CACHE_KEY_PREFIX + websiteData.subdomain);
+    }
+
+    // On localhost (or when using query-param access), go back to the public preview
+    // and preserve the website selection.
+    if (siteParam) {
+      navigate(`/?site=${encodeURIComponent(siteParam)}`);
+      return;
+    }
     
     // If on subdomain, go back to public site (root)
     // Otherwise go to admin websites page

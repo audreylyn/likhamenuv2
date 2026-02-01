@@ -137,6 +137,7 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
       // Get subdomain or site parameter
       const siteParam = params.get("site") || params.get("website");
       const subdomain = siteParam || getSubdomain(hostname);
+      const allowDraft = !!siteParam;
 
       if (!subdomain) {
         setLoading(false);
@@ -154,7 +155,7 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       // No cache - fetch from network
-      await fetchWebsite(subdomain, hostname);
+      await fetchWebsite(subdomain, hostname, allowDraft);
     } catch (error) {
       console.error("[WebsiteContext] Error detecting website:", error);
       setLoading(false);
@@ -162,7 +163,11 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   // Fetch website data from Supabase
-  const fetchWebsite = async (subdomain: string, hostname: string) => {
+  const fetchWebsite = async (
+    subdomain: string,
+    hostname: string,
+    allowDraft: boolean,
+  ) => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -172,7 +177,12 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       const isLocalhost =
         hostname === "localhost" || hostname.startsWith("127.");
-      const statusFilter = isLocalhost ? "" : "&status=eq.published";
+
+      // Draft access rules:
+      // - Localhost: allow draft & published
+      // - Query-param access (?site=): allow draft & published (admin preview)
+      // - Subdomain access: published only
+      const statusFilter = isLocalhost || allowDraft ? "" : "&status=eq.published";
 
       const response = await fetch(
         `${supabaseUrl}/rest/v1/websites?subdomain=eq.${subdomain}${statusFilter}&select=id,title,subdomain,status,theme,content,enabledsections,messenger,contactformconfig`,

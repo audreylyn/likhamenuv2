@@ -218,9 +218,15 @@ export function buildWebsiteUrl(
     const editPath = mode === 'editor' ? '/edit' : '';
     return `${base}${editPath}${path}?site=${subdomain}`;
   } else {
-    // Production: Use subdomain
     const domain = (import.meta as any).env.VITE_DOMAIN || 'likhasiteworks.studio';
-    const editPath = mode === 'editor' ? '/edit' : '';
-    return `https://${subdomain}.${domain}${editPath}${path}`;
+
+    // Production:
+    // - Public sites are served from the subdomain (published-only)
+    // - Editor/draft preview must use query-param access (works for draft & published)
+    if (mode === 'editor') {
+      return `https://${domain}/edit${path}?site=${encodeURIComponent(subdomain)}`;
+    }
+
+    return `https://${subdomain}.${domain}${path}`;
   }
 }

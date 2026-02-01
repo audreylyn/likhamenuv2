@@ -10,10 +10,11 @@ import { EditorProvider, useEditor } from '../contexts/EditorContext';
 import { EditorLayout } from '../components/editor/EditorLayout';
 import { FloatingToolbar } from '../components/editor/FloatingToolbar';
 import { PublicSite } from './PublicSite';
+import { supabase } from '../lib/supabase';
 
 const EditorContent: React.FC = () => {
   const { user } = useAuth();
-  const { websiteData, loading, currentWebsite } = useWebsite();
+  const { websiteData, loading, currentWebsite, refreshContent } = useWebsite();
   const { isEditing, setIsEditing, hasChanges, setHasChanges } = useEditor();
   const [isSaving, setIsSaving] = useState(false);
 
@@ -26,8 +27,34 @@ const EditorContent: React.FC = () => {
   };
 
   const handlePublish = async () => {
-    await handleSave();
-    alert('Changes published successfully!');
+    if (!currentWebsite) return;
+
+    setIsSaving(true);
+    try {
+      // Ensure any UI state marked as changed is cleared
+      await handleSave();
+
+      const { error } = await supabase
+        .from('websites')
+        .update({
+          status: 'published',
+          updatedat: new Date().toISOString(),
+        })
+        .eq('id', currentWebsite);
+
+      if (error) {
+        console.error('❌ Publish failed:', error);
+        alert(`Failed to publish: ${error.message}`);
+        return;
+      }
+
+      // Force fresh content + clear cache
+      refreshContent();
+      setHasChanges(false);
+      alert('Changes published successfully!');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handlePreview = () => {

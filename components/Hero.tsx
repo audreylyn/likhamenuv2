@@ -63,6 +63,16 @@ export const Hero: React.FC = () => {
 
   const slides = (content?.slides as HeroSlide[]) || [];
 
+  // Ensure current index is within bounds when slides change
+  useEffect(() => {
+    if (slides.length > 0 && current >= slides.length) {
+      setCurrent(slides.length - 1);
+    }
+  }, [slides.length, current]);
+
+  // Get the current slide with defensive check
+  const currentSlide = slides[current] || slides[0];
+
   useEffect(() => {
     // Disable autoplay when editing
     if (isEditing || slides.length === 0 || !content?.autoplay) return;
@@ -78,11 +88,14 @@ export const Hero: React.FC = () => {
     setCurrent((prev) => (prev - 1 + slides.length) % slides.length);
 
   const handleImageChange = async (slideIndex: number) => {
+    const slide = slides[slideIndex];
+    if (!slide) return;
+    
     const newImageUrl = prompt(
       "Enter new image URL:",
-      slides[slideIndex].image,
+      slide.image,
     );
-    if (newImageUrl && newImageUrl !== slides[slideIndex].image) {
+    if (newImageUrl && newImageUrl !== slide.image) {
       try {
         const updatedSlides = [...slides];
         updatedSlides[slideIndex] = {
@@ -139,9 +152,12 @@ export const Hero: React.FC = () => {
       return;
     }
 
+    const slideToDelete = slides[current];
+    if (!slideToDelete) return;
+
     if (
       !confirm(
-        `Are you sure you want to delete this slide?\n\n"${slides[current].title}"`,
+        `Are you sure you want to delete this slide?\n\n"${slideToDelete.title}"`,
       )
     ) {
       return;
@@ -215,7 +231,7 @@ export const Hero: React.FC = () => {
             {/* Background Image with Overlay */}
             <div
               className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url(${slides[current].image})` }}
+              style={{ backgroundImage: `url(${currentSlide?.image || ''})` }}
             />
             <div className="absolute inset-0 bg-black/40" />
           </motion.div>
@@ -282,9 +298,9 @@ export const Hero: React.FC = () => {
               exit={isEditing ? undefined : { y: -20, opacity: 0 }}
               transition={isEditing ? {} : { duration: 0.5, delay: 0.2 }}
             >
-              {isEditing ? (
+              {isEditing && currentSlide ? (
                 <EditableText
-                  value={slides[current].title}
+                  value={currentSlide.title}
                   onSave={async (newValue) => {
                     const updatedSlides = [...slides];
                     updatedSlides[current] = {
@@ -304,12 +320,12 @@ export const Hero: React.FC = () => {
                 />
               ) : (
                 <h1 className="font-serif text-5xl md:text-7xl font-bold text-white mb-6 drop-shadow-md">
-                  {slides[current].title}
+                  {currentSlide?.title || ''}
                 </h1>
               )}
-              {isEditing ? (
+              {isEditing && currentSlide ? (
                 <EditableText
-                  value={slides[current].subtitle}
+                  value={currentSlide.subtitle}
                   onSave={async (newValue) => {
                     const updatedSlides = [...slides];
                     updatedSlides[current] = {
@@ -330,7 +346,7 @@ export const Hero: React.FC = () => {
                 />
               ) : (
                 <p className="font-sans text-xl md:text-2xl text-bakery-cream mb-8 font-light tracking-wide drop-shadow-sm">
-                  {slides[current].subtitle}
+                  {currentSlide?.subtitle || ''}
                 </p>
               )}
               {content.show_button && (
