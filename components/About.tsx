@@ -187,7 +187,7 @@ export const About: React.FC = () => {
                   "https://lanecove.s3.ap-southeast-2.amazonaws.com/wp-content/uploads/2016/05/04233634/bakers-delight-goods.jpg"
                 }
                 alt={content.heading}
-                className="rounded-lg shadow-2xl w-[85%] border-4 border-white"
+                className="rounded-lg shadow-2xl w-[85%] border-4 border-white mx-auto block"
               />
               {isEditing && (
                 <div

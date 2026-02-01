@@ -55,7 +55,7 @@ export const Testimonials: React.FC = () => {
   }, [isEditing]);
 
   const maxIndex = Math.max(0, testimonials.length - visibleCards);
-  const shouldShowSwiper = testimonials.length > 3;
+  const shouldShowSwiper = testimonials.length > visibleCards;
 
   const nextSlide = () => {
     setIndex((prev) => Math.min(prev + 1, maxIndex));
