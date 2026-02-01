@@ -44,8 +44,8 @@ export const Cart: React.FC<CartProps> = ({
     // Try to get Messenger ID from various sources in priority order
     // 1. Dedicated messenger config
     const messengerConfig = websiteData.messenger as any;
-    if (messengerConfig?.pageId) {
-      setFacebookMessengerId(messengerConfig.pageId);
+    if (messengerConfig?.page_id) {
+      setFacebookMessengerId(messengerConfig.page_id);
       return;
     }
 

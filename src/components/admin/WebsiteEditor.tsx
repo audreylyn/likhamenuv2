@@ -172,9 +172,7 @@ export const WebsiteEditor: React.FC = () => {
         ),
       );
       setKnowledgeBaseSheetsUrl(
-        chatSupport.knowledge_base_url ||
-          import.meta.env.VITE_GOOGLE_SHEETS_KB_URL ||
-          "",
+        import.meta.env.VITE_GOOGLE_SHEETS_KB_URL || "",
       );
 
       // Messenger from messenger JSONB
@@ -240,7 +238,7 @@ export const WebsiteEditor: React.FC = () => {
           enabled: chatSupportEnabled,
           greeting_message: greetingMessage,
           config: chatbotConfig,
-          knowledge_base_url: knowledgeBaseSheetsUrl || null,
+          knowledge_base_url: null, // Always use env variable
         },
       };
 
@@ -637,26 +635,16 @@ export const WebsiteEditor: React.FC = () => {
                     />
                   </div>
 
-                  {/* Knowledge Base URL */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Knowledge Base URL (Google Sheets)
-                    </label>
-                    <input
-                      type="url"
-                      value={knowledgeBaseSheetsUrl}
-                      onChange={(e) =>
-                        setKnowledgeBaseSheetsUrl(e.target.value)
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono"
-                      placeholder="https://script.google.com/macros/s/YOUR-SCRIPT-ID/exec"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
+                  {/* Knowledge Base Info */}
+                  <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                    <p className="text-sm text-purple-800">
+                      <strong>📚 Knowledge Base</strong>
+                      <br />
                       Set globally via{" "}
-                      <code className="bg-gray-100 px-1 rounded">
+                      <code className="bg-white px-1 rounded">
                         VITE_GOOGLE_SHEETS_KB_URL
                       </code>{" "}
-                      or per-website here.
+                      in your .env file.
                     </p>
                   </div>
                 </div>
