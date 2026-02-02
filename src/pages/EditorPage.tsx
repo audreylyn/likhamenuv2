@@ -27,19 +27,10 @@ const EditorContent: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
-  // Check if already authenticated via sessionStorage or if no password is set
+  // Check if password is required (no auto-authentication via storage)
   useEffect(() => {
     const checkAuth = async () => {
       if (currentWebsite) {
-        const authKey = `website_edit_auth_${currentWebsite}`;
-        const isAuth = sessionStorage.getItem(authKey) === 'true';
-        
-        if (isAuth) {
-          setIsAuthenticated(true);
-          setCheckingAuth(false);
-          return;
-        }
-
         // Check if website has a password set
         const { data, error } = await supabase
           .from('websites')
@@ -58,7 +49,6 @@ const EditorContent: React.FC = () => {
         // If no password is set, auto-authenticate
         if (!storedPassword) {
           setIsAuthenticated(true);
-          sessionStorage.setItem(authKey, 'true');
         }
 
         setCheckingAuth(false);
@@ -88,7 +78,6 @@ const EditorContent: React.FC = () => {
     // If no password is set, allow access
     if (!storedPassword) {
       setIsAuthenticated(true);
-      sessionStorage.setItem(`website_edit_auth_${currentWebsite}`, 'true');
       return;
     }
 
@@ -96,7 +85,6 @@ const EditorContent: React.FC = () => {
     if (passwordInput === storedPassword) {
       setIsAuthenticated(true);
       setPasswordError('');
-      sessionStorage.setItem(`website_edit_auth_${currentWebsite}`, 'true');
     } else {
       setPasswordError('Incorrect password. Please try again.');
     }

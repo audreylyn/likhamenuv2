@@ -144,17 +144,11 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
         return;
       }
 
-      // Check cache first for instant loading
-      const cached = getCachedWebsite(subdomain);
-      if (cached) {
-        console.log("[WebsiteContext] Using cached data for", subdomain);
-        sessionStorage.removeItem("inactive_website");
-        setCurrentWebsite(cached.id);
-        processWebsiteData(cached);
-        return;
-      }
-
-      // No cache - fetch from network
+      // Clear cache and always fetch fresh data
+      localStorage.removeItem(CACHE_KEY_PREFIX + subdomain);
+      console.log("[WebsiteContext] Fetching fresh data for", subdomain);
+      
+      // Fetch from network
       await fetchWebsite(subdomain, hostname, allowDraft);
     } catch (error) {
       console.error("[WebsiteContext] Error detecting website:", error);
@@ -203,8 +197,8 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
         const website = websites[0];
         sessionStorage.removeItem("inactive_website");
 
-        // Cache the website data
-        setCachedWebsite(subdomain, website);
+        // Don't cache - always fetch fresh
+        // setCachedWebsite(subdomain, website);
 
         setCurrentWebsite(website.id);
         processWebsiteData(website);
@@ -264,10 +258,10 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (error) throw error;
 
-      // Update cache with fresh data
-      if (website?.subdomain) {
-        setCachedWebsite(website.subdomain, website);
-      }
+      // Don't cache - always use fresh data
+      // if (website?.subdomain) {
+      //   setCachedWebsite(website.subdomain, website);
+      // }
 
       processWebsiteData(website);
     } catch (error) {
@@ -285,10 +279,12 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
     // Increment version to trigger components to refetch
     setContentVersion((prev) => prev + 1);
 
-    // Clear cache for current website to force fresh fetch
-    if (websiteData?.subdomain) {
-      localStorage.removeItem(CACHE_KEY_PREFIX + websiteData.subdomain);
-    }
+    // Clear ALL website caches to force fresh fetch
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith(CACHE_KEY_PREFIX)) {
+        localStorage.removeItem(key);
+      }
+    });
 
     // Also reload website data if we have a current website
     if (currentWebsite) {

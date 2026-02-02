@@ -79,14 +79,8 @@ export const WebsiteEditor: React.FC = () => {
       // Store password for verification
       setStoredPassword(websiteData.password || null);
 
-      // Check if already authenticated via sessionStorage
-      const authKey = `website_auth_${websiteId}`;
-      const isAuth = sessionStorage.getItem(authKey) === "true";
-      
       // If no password set, allow access
       if (!websiteData.password) {
-        setIsAuthenticated(true);
-      } else if (isAuth) {
         setIsAuthenticated(true);
       }
 
@@ -264,8 +258,6 @@ export const WebsiteEditor: React.FC = () => {
       if (passwordInput === storedPassword) {
         setIsAuthenticated(true);
         setPasswordError("");
-        // Store authentication in sessionStorage for this session
-        sessionStorage.setItem(`website_auth_${websiteId}`, "true");
       } else {
         setPasswordError("Incorrect password. Please try again.");
       }

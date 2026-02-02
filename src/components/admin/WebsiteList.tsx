@@ -622,8 +622,7 @@ export const WebsiteList: React.FC = () => {
                 e.preventDefault();
                 const website = websites.find((w) => w.id === passwordModal.websiteId);
                 if (website && website.password === passwordModal.inputPassword) {
-                  // Password correct - store auth and navigate to edit page
-                  sessionStorage.setItem(`website_auth_${passwordModal.websiteId}`, "true");
+                  // Password correct - navigate to edit page (no storage)
                   window.location.href = `/admin/websites/${passwordModal.websiteId}`;
                 } else {
                   setPasswordModal((prev) => ({
