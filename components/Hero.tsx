@@ -8,14 +8,16 @@ import {
 import {
   ChevronLeft,
   ChevronRight,
-  Image as ImageIcon,
+  Upload,
   Plus,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import type { HeroContent, HeroSlide } from "../src/types/database.types";
 import { EditableText } from "../src/components/editor/EditableText";
 import { useEditor } from "../src/contexts/EditorContext";
 import { useWebsite } from "../src/contexts/WebsiteContext";
+import { supabase } from "../src/lib/supabase";
 
 // Default hero content
 const DEFAULT_HERO: HeroContent = {
@@ -87,24 +89,60 @@ export const Hero: React.FC = () => {
   const prevSlide = () =>
     setCurrent((prev) => (prev - 1 + slides.length) % slides.length);
 
-  const handleImageChange = async (slideIndex: number) => {
-    const slide = slides[slideIndex];
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be less than 5MB');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `hero-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+
+      const { data, error: uploadError } = await supabase.storage
+        .from('images')
+        .upload(fileName, file, { cacheControl: '3600', upsert: false });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from('images').getPublicUrl(data.path);
+
+      const updatedSlides = [...slides];
+      updatedSlides[current] = { ...updatedSlides[current], image: urlData.publicUrl };
+      await saveField("hero", "slides", updatedSlides);
+      setContent({ ...content!, slides: updatedSlides });
+    } catch (error: any) {
+      console.error("Error uploading image:", error);
+      alert("Failed to upload image: " + (error.message || 'Unknown error'));
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleImageUrlChange = async () => {
+    const slide = slides[current];
     if (!slide) return;
     
-    const newImageUrl = prompt(
-      "Enter new image URL:",
-      slide.image,
-    );
+    const newImageUrl = prompt("Enter new image URL:", slide.image);
     if (newImageUrl && newImageUrl !== slide.image) {
       try {
         const updatedSlides = [...slides];
-        updatedSlides[slideIndex] = {
-          ...updatedSlides[slideIndex],
-          image: newImageUrl,
-        };
+        updatedSlides[current] = { ...updatedSlides[current], image: newImageUrl };
         await saveField("hero", "slides", updatedSlides);
         setContent({ ...content!, slides: updatedSlides });
-        alert("Image saved successfully!");
       } catch (error) {
         console.error("Error saving image:", error);
         alert("Failed to save image. Please try again.");
@@ -241,18 +279,40 @@ export const Hero: React.FC = () => {
       {/* Editor Controls - Outside background div for proper z-index */}
       {isEditing && (
         <div className="absolute bottom-4 left-4 flex flex-col gap-2 z-50">
-          {/* Change Image Button */}
-          <div
-            className="cursor-pointer"
-            onClick={() => handleImageChange(current)}
-            title="Click to change background image"
-          >
-            <div className="bg-white/95 backdrop-blur-sm rounded-lg px-4 py-2 flex items-center gap-2 shadow-lg hover:bg-white transition-colors border-2 border-blue-500">
-              <ImageIcon size={20} className="text-gray-700" />
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="hidden"
+          />
+
+          {/* Image Upload/URL Buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="bg-white/95 backdrop-blur-sm rounded-lg px-4 py-2 flex items-center gap-2 shadow-lg hover:bg-white transition-colors border-2 border-blue-500 disabled:opacity-50"
+              title="Upload background image"
+            >
+              {isUploading ? (
+                <Loader2 size={20} className="text-gray-700 animate-spin" />
+              ) : (
+                <Upload size={20} className="text-gray-700" />
+              )}
               <span className="text-gray-700 font-medium text-sm">
-                Change Background Image
+                {isUploading ? 'Uploading...' : 'Upload Image'}
               </span>
-            </div>
+            </button>
+            <button
+              onClick={handleImageUrlChange}
+              disabled={isUploading}
+              className="bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg hover:bg-white transition-colors border-2 border-gray-300 disabled:opacity-50"
+              title="Enter image URL"
+            >
+              <span className="text-gray-700 font-medium text-sm">URL</span>
+            </button>
           </div>
 
           {/* Add/Delete Slide Buttons */}

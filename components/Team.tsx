@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Image as ImageIcon } from "lucide-react";
 import type {
   TeamMember,
   TeamSectionConfig,
 } from "../src/types/database.types";
 import { EditableText } from "../src/components/editor/EditableText";
+import { EditableImage } from "../src/components/editor/EditableImage";
 import { useEditor } from "../src/contexts/EditorContext";
 import { useWebsite } from "../src/contexts/WebsiteContext";
 
@@ -99,23 +99,6 @@ export const Team: React.FC = () => {
 
   if (!config || members.length === 0) return null;
 
-  const handleImageChange = async (member: TeamMember) => {
-    const newImageUrl = prompt("Enter new image URL:", member.image_url || "");
-    if (newImageUrl !== null && newImageUrl !== member.image_url) {
-      try {
-        const updatedMembers = members.map((m) =>
-          m.id === member.id ? { ...m, image_url: newImageUrl } : m,
-        );
-        await saveField("team", "members", updatedMembers);
-        setMembers(updatedMembers);
-        alert("Image saved successfully!");
-      } catch (error) {
-        console.error("Error saving image:", error);
-        alert("Failed to save image. Please try again.");
-      }
-    }
-  };
-
   return (
     <section id="team" className="py-24 bg-bakery-cream relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -163,28 +146,21 @@ export const Team: React.FC = () => {
             <div key={member.id} className="group relative">
               {/* Image Card */}
               <div className="relative overflow-hidden rounded-2xl aspect-[3/4] shadow-lg mb-6">
-                <img
+                <EditableImage
                   src={
                     member.image_url ||
                     "https://i.pravatar.cc/500?img=" + member.id
                   }
                   alt={member.name}
+                  onSave={async (newUrl) => {
+                    const updatedMembers = members.map((m) =>
+                      m.id === member.id ? { ...m, image_url: newUrl } : m,
+                    );
+                    await saveField("team", "members", updatedMembers);
+                    setMembers(updatedMembers);
+                  }}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
-                {isEditing && (
-                  <div
-                    className="absolute top-4 left-4 cursor-pointer z-50"
-                    onClick={() => handleImageChange(member)}
-                    title="Click to change image"
-                  >
-                    <div className="bg-white/95 backdrop-blur-sm rounded-lg px-3 py-1.5 flex items-center gap-2 shadow-lg hover:bg-white transition-colors border-2 border-blue-500">
-                      <ImageIcon size={16} className="text-gray-700" />
-                      <span className="text-gray-700 font-medium text-xs">
-                        Change Image
-                      </span>
-                    </div>
-                  </div>
-                )}
                 {member.bio && (
                   <div
                     className={`absolute inset-0 bg-gradient-to-t from-bakery-dark/80 via-transparent to-transparent ${isEditing ? "opacity-100" : "opacity-0 group-hover:opacity-100"} transition-opacity duration-300 flex flex-col justify-end p-6`}

@@ -7,7 +7,6 @@ import {
   CheckCircle,
   Users,
   Leaf,
-  Image as ImageIcon,
   ChefHat,
   Star,
   Shield,
@@ -32,6 +31,7 @@ import {
 } from "lucide-react";
 import type { AboutContent } from "../src/types/database.types";
 import { EditableText } from "../src/components/editor/EditableText";
+import { EditableImage } from "../src/components/editor/EditableImage";
 import { IconPicker } from "../src/components/editor/IconPicker";
 import { useEditor } from "../src/contexts/EditorContext";
 import { useWebsite } from "../src/contexts/WebsiteContext";
@@ -140,20 +140,6 @@ export const About: React.FC = () => {
   const features = (content.features as any[]) || [];
   const stats = (content.stats as any[]) || [];
 
-  const handleImageChange = async () => {
-    const newImageUrl = prompt("Enter new image URL:", content.image_url || "");
-    if (newImageUrl !== null && newImageUrl !== content.image_url) {
-      try {
-        await saveField("about", "image_url", newImageUrl, content.id);
-        setContent({ ...content, image_url: newImageUrl });
-        alert("Image saved successfully!");
-      } catch (error) {
-        console.error("Error saving image:", error);
-        alert("Failed to save image. Please try again.");
-      }
-    }
-  };
-
   const handleIconSelect = async (iconName: string) => {
     if (editingIconIndex === null || !content) return;
     try {
@@ -181,28 +167,18 @@ export const About: React.FC = () => {
           {/* Image Collage */}
           <div className="w-full md:w-1/2 relative">
             <div className="relative z-10">
-              <img
+              <EditableImage
                 src={
                   content.image_url ||
                   "https://lanecove.s3.ap-southeast-2.amazonaws.com/wp-content/uploads/2016/05/04233634/bakers-delight-goods.jpg"
                 }
                 alt={content.heading}
+                onSave={async (newUrl) => {
+                  await saveField("about", "image_url", newUrl, content.id);
+                  setContent({ ...content, image_url: newUrl });
+                }}
                 className="rounded-lg shadow-2xl w-[85%] border-4 border-white mx-auto block"
               />
-              {isEditing && (
-                <div
-                  className="absolute bottom-4 left-4 cursor-pointer z-50"
-                  onClick={handleImageChange}
-                  title="Click to change image"
-                >
-                  <div className="bg-white/95 backdrop-blur-sm rounded-lg px-4 py-2 flex items-center gap-2 shadow-lg hover:bg-white transition-colors border-2 border-blue-500">
-                    <ImageIcon size={20} className="text-gray-700" />
-                    <span className="text-gray-700 font-medium text-sm">
-                      Change Image
-                    </span>
-                  </div>
-                </div>
-              )}
             </div>
             <div className="absolute -bottom-10 -right-4 z-20 w-[60%]">
               {(() => {
@@ -215,69 +191,39 @@ export const About: React.FC = () => {
                   "https://images.unsplash.com/photo-1509440159596-0249088772ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80";
 
                 return (
-                  <>
-                    <img
-                      src={secondaryImageUrl}
-                      alt="Fresh loaves"
-                      className="rounded-lg shadow-xl border-4 border-white"
-                    />
-                    {isEditing && (
-                      <div
-                        className="absolute bottom-4 left-4 cursor-pointer z-50"
-                        onClick={async () => {
-                          const newImageUrl = prompt(
-                            "Enter new image URL:",
-                            secondaryImageUrl,
-                          );
-                          if (
-                            newImageUrl !== null &&
-                            newImageUrl !== secondaryImageUrl
-                          ) {
-                            try {
-                              // Update or add secondary image to stats
-                              const updatedStats = [...stats];
-                              const existingIndex = updatedStats.findIndex(
-                                (s: any) => s.type === "secondary_image",
-                              );
-                              if (existingIndex >= 0) {
-                                updatedStats[existingIndex] = {
-                                  type: "secondary_image",
-                                  value: newImageUrl,
-                                };
-                              } else {
-                                updatedStats.push({
-                                  type: "secondary_image",
-                                  value: newImageUrl,
-                                });
-                              }
-                              await saveField(
-                                "about",
-                                "stats",
-                                updatedStats,
-                                content.id,
-                              );
-                              setContent({
-                                ...content,
-                                stats: updatedStats as any,
-                              });
-                              alert("Image saved successfully!");
-                            } catch (error) {
-                              console.error("Error saving image:", error);
-                              alert("Failed to save image. Please try again.");
-                            }
-                          }
-                        }}
-                        title="Click to change image"
-                      >
-                        <div className="bg-white/95 backdrop-blur-sm rounded-lg px-3 py-1.5 flex items-center gap-2 shadow-lg hover:bg-white transition-colors border-2 border-blue-500">
-                          <ImageIcon size={16} className="text-gray-700" />
-                          <span className="text-gray-700 font-medium text-xs">
-                            Change Image
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </>
+                  <EditableImage
+                    src={secondaryImageUrl}
+                    alt="Fresh loaves"
+                    onSave={async (newUrl) => {
+                      // Update or add secondary image to stats
+                      const updatedStats = [...stats];
+                      const existingIndex = updatedStats.findIndex(
+                        (s: any) => s.type === "secondary_image",
+                      );
+                      if (existingIndex >= 0) {
+                        updatedStats[existingIndex] = {
+                          type: "secondary_image",
+                          value: newUrl,
+                        };
+                      } else {
+                        updatedStats.push({
+                          type: "secondary_image",
+                          value: newUrl,
+                        });
+                      }
+                      await saveField(
+                        "about",
+                        "stats",
+                        updatedStats,
+                        content.id,
+                      );
+                      setContent({
+                        ...content,
+                        stats: updatedStats as any,
+                      });
+                    }}
+                    className="rounded-lg shadow-xl border-4 border-white"
+                  />
                 );
               })()}
             </div>

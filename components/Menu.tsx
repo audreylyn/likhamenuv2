@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { MenuItem } from '../types';
-import { ShoppingBag, Eye, X, Star, Image as ImageIcon, Plus, Trash2 } from 'lucide-react';
+import { ShoppingBag, Eye, X, Star, Plus, Trash2 } from 'lucide-react';
 import { getWebsiteId } from '../src/lib/supabase'; // Keep getWebsiteId if needed for other things, but maybe not?
 import type { MenuCategory, MenuItem as DBMenuItem, MenuSectionConfig } from '../src/types/database.types';
 import { EditableText } from '../src/components/editor/EditableText';
+import { EditableImage } from '../src/components/editor/EditableImage';
 import { useEditor } from '../src/contexts/EditorContext';
 import { useWebsite } from '../src/contexts/WebsiteContext';
 
@@ -86,36 +87,6 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
   const getCategoryNameForItem = (categoryId: string) => {
     const cat = categories.find(c => c.id === categoryId);
     return cat?.name || 'Product';
-  };
-
-  const handleImageChange = async (item: MenuItem) => {
-    const dbItem = dbMenuItems.find(db => db.id === item.id);
-    if (!dbItem) return;
-
-    const newImageUrl = prompt('Enter new image URL:', dbItem.image_url || '');
-    if (newImageUrl !== null && newImageUrl !== dbItem.image_url) {
-      try {
-        const updatedItems = dbMenuItems.map(db =>
-          db.id === dbItem.id ? { ...db, image_url: newImageUrl } : db
-        );
-
-        await saveField('menu', 'items', updatedItems);
-
-        // Update local state
-        setDbMenuItems(updatedItems);
-        setMenuItems(updatedItems.map(adaptMenuItem));
-
-        // Update selected item if needed
-        if (selectedItem?.id === item.id) {
-          setSelectedItem({ ...selectedItem, image: newImageUrl });
-        }
-
-        alert('Image saved successfully!');
-      } catch (error) {
-        console.error('Error saving image:', error);
-        alert('Failed to save image. Please try again.');
-      }
-    }
   };
 
   if (loading) {
@@ -284,9 +255,20 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
               className="group bg-bakery-light rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col h-full border border-bakery-sand/30"
             >
               <div className="relative h-64 overflow-hidden cursor-pointer" onClick={() => !isEditing && setSelectedItem(item)}>
-                <img
+                <EditableImage
                   src={item.image}
                   alt={item.name}
+                  onSave={async (newUrl) => {
+                    const updatedItems = dbMenuItems.map(db =>
+                      db.id === item.id ? { ...db, image_url: newUrl } : db
+                    );
+                    await saveField('menu', 'items', updatedItems);
+                    setDbMenuItems(updatedItems);
+                    setMenuItems(updatedItems.map(adaptMenuItem));
+                    if (selectedItem?.id === item.id) {
+                      setSelectedItem({ ...selectedItem, image: newUrl });
+                    }
+                  }}
                   className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out"
                 />
                 {isEditing ? (
@@ -315,21 +297,6 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                 ) : (
                   <div className="absolute top-4 left-4 bg-bakery-light/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold font-sans uppercase tracking-wider text-bakery-dark shadow-sm z-10">
                     {getCategoryNameForItem(item.category)}
-                  </div>
-                )}
-                {isEditing && (
-                  <div
-                    className="absolute bottom-4 left-4 cursor-pointer z-50"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleImageChange(item);
-                    }}
-                    title="Click to change image"
-                  >
-                    <div className="bg-bakery-light/95 backdrop-blur-sm rounded-lg px-3 py-1.5 flex items-center gap-2 shadow-lg hover:bg-bakery-light transition-colors border-2 border-blue-500">
-                      <ImageIcon size={16} className="text-bakery-text" />
-                      <span className="text-bakery-text font-medium text-xs">Change Image</span>
-                    </div>
                   </div>
                 )}
               </div>
@@ -514,26 +481,20 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
 
             <div className="grid md:grid-cols-2">
               <div className="h-64 md:h-full relative">
-                <img
+                <EditableImage
                   src={selectedItem.image}
                   alt={selectedItem.name}
+                  onSave={async (newUrl) => {
+                    const updatedItems = dbMenuItems.map(db =>
+                      db.id === selectedItem.id ? { ...db, image_url: newUrl } : db
+                    );
+                    await saveField('menu', 'items', updatedItems);
+                    setDbMenuItems(updatedItems);
+                    setMenuItems(updatedItems.map(adaptMenuItem));
+                    setSelectedItem({ ...selectedItem, image: newUrl });
+                  }}
                   className="w-full h-full object-cover"
                 />
-                {isEditing && (
-                  <div
-                    className="absolute bottom-4 left-4 cursor-pointer z-50"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleImageChange(selectedItem);
-                    }}
-                    title="Click to change image"
-                  >
-                    <div className="bg-bakery-light/95 backdrop-blur-sm rounded-lg px-3 py-1.5 flex items-center gap-2 shadow-lg hover:bg-bakery-light transition-colors border-2 border-blue-500">
-                      <ImageIcon size={16} className="text-bakery-text" />
-                      <span className="text-bakery-text font-medium text-xs">Change Image</span>
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div className="p-8 flex flex-col justify-center bg-bakery-cream/30">

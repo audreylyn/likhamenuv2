@@ -4,13 +4,13 @@ import {
   ShoppingBag,
   Star,
   ArrowRight,
-  Image as ImageIcon,
 } from "lucide-react";
 import type {
   Product,
   FeaturedProductsConfig,
 } from "../src/types/database.types";
 import { EditableText } from "../src/components/editor/EditableText";
+import { EditableImage } from "../src/components/editor/EditableImage";
 import { useEditor } from "../src/contexts/EditorContext";
 import { useWebsite } from "../src/contexts/WebsiteContext";
 
@@ -149,33 +149,6 @@ export const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
 
   if (!config || products.length === 0) return null;
 
-  const handleImageChange = async (item: MenuItem) => {
-    const dbProduct = dbProducts.find((db) => db.name === item.name);
-    if (!dbProduct) {
-      alert("Product not found. Please refresh the page.");
-      return;
-    }
-
-    const newImageUrl = prompt(
-      "Enter new image URL:",
-      dbProduct.image_url || "",
-    );
-    if (newImageUrl !== null && newImageUrl !== dbProduct.image_url) {
-      try {
-        const updatedDbProducts = dbProducts.map((db) =>
-          db.id === dbProduct.id ? { ...db, image_url: newImageUrl } : db,
-        );
-        await saveField("featuredProducts", "products", updatedDbProducts);
-        setDbProducts(updatedDbProducts);
-        setProducts(updatedDbProducts.map(adaptProduct));
-        alert("Image saved successfully!");
-      } catch (error) {
-        console.error("Error saving image:", error);
-        alert("Failed to save image. Please try again.");
-      }
-    }
-  };
-
   return (
     <section id="featuredProducts" className="py-24 bg-bakery-light relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -231,13 +204,24 @@ export const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
 
         {/* Product Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
-          {products.map((item) => (
+          {products.map((item) => {
+            const dbProduct = dbProducts.find((db) => db.name === item.name);
+            return (
             <div key={item.id} className="group flex flex-col h-full">
               {/* Image Container */}
               <div className="aspect-[4/5] w-full rounded-2xl overflow-hidden mb-6 relative shadow-md hover:shadow-xl transition-all duration-500">
-                <img
+                <EditableImage
                   src={item.image}
                   alt={item.name}
+                  onSave={async (newUrl) => {
+                    if (!dbProduct) return;
+                    const updatedDbProducts = dbProducts.map((db) =>
+                      db.id === dbProduct.id ? { ...db, image_url: newUrl } : db,
+                    );
+                    await saveField("featuredProducts", "products", updatedDbProducts);
+                    setDbProducts(updatedDbProducts);
+                    setProducts(updatedDbProducts.map(adaptProduct));
+                  }}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
 
@@ -251,20 +235,6 @@ export const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
                     Top Pick
                   </span>
                 </div>
-
-                {/* Change Image Button */}
-                {isEditing && (
-                  <div
-                    className="absolute top-4 left-4 cursor-pointer z-50"
-                    onClick={() => handleImageChange(item)}
-                    title="Click to change image"
-                  >
-                    <div className="bg-bakery-light/95 backdrop-blur-sm rounded-lg px-3 py-1.5 flex items-center gap-2 shadow-lg hover:bg-bakery-light transition-colors border-2 border-blue-500">
-                      <ImageIcon size={16} className="text-bakery-text" />
-                      <span className="text-bakery-text font-medium text-xs">
-                        Change Image
-                      </span>
-                    </div>
                   </div>
                 )}
 
@@ -378,7 +348,8 @@ export const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
                 )}
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
       </div>
     </section>
