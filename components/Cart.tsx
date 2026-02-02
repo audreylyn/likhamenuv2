@@ -23,6 +23,9 @@ export const Cart: React.FC<CartProps> = ({
 }) => {
   const [customerDetails, setCustomerDetails] = useState({
     name: '',
+    email: '',
+    contactNumber: '',
+    orderType: '',
     location: '',
     message: ''
   });
@@ -81,6 +84,9 @@ export const Cart: React.FC<CartProps> = ({
     lines.push(`Total: ₱${total}`);
     lines.push('');
     lines.push(`Customer: ${customerDetails.name}`);
+    lines.push(`Email: ${customerDetails.email || 'N/A'}`);
+    lines.push(`Contact: ${customerDetails.contactNumber || 'N/A'}`);
+    lines.push(`Order Type: ${customerDetails.orderType || 'N/A'}`);
     lines.push(`Location: ${customerDetails.location}`);
     lines.push(`Note: ${customerDetails.message || 'N/A'}`);
 
@@ -92,7 +98,7 @@ export const Cart: React.FC<CartProps> = ({
 
     // Clear cart and close first (before navigation)
     onClear();
-    setCustomerDetails({ name: '', location: '', message: '' });
+    setCustomerDetails({ name: '', email: '', contactNumber: '', orderType: '', location: '', message: '' });
     onClose();
 
     // Small delay to allow cart to close, then open Messenger
@@ -221,6 +227,42 @@ export const Cart: React.FC<CartProps> = ({
                       className="w-full px-4 py-2.5 rounded-lg border border-bakery-sand bg-white focus:ring-2 focus:ring-bakery-primary/20 focus:border-bakery-primary outline-none transition-all"
                       placeholder="Enter your name"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-bakery-dark mb-1.5 font-serif">Email</label>
+                    <input
+                      type="email"
+                      value={customerDetails.email}
+                      onChange={(e) => setCustomerDetails({ ...customerDetails, email: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-lg border border-bakery-sand bg-white focus:ring-2 focus:ring-bakery-primary/20 focus:border-bakery-primary outline-none transition-all"
+                      placeholder="your@email.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-bakery-dark mb-1.5 font-serif">Contact Number</label>
+                    <input
+                      type="tel"
+                      value={customerDetails.contactNumber}
+                      onChange={(e) => setCustomerDetails({ ...customerDetails, contactNumber: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-lg border border-bakery-sand bg-white focus:ring-2 focus:ring-bakery-primary/20 focus:border-bakery-primary outline-none transition-all"
+                      placeholder="e.g. 09123456789"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-bakery-dark mb-1.5 font-serif">Order Type</label>
+                    <select
+                      value={customerDetails.orderType}
+                      onChange={(e) => setCustomerDetails({ ...customerDetails, orderType: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-lg border border-bakery-sand bg-white focus:ring-2 focus:ring-bakery-primary/20 focus:border-bakery-primary outline-none transition-all"
+                    >
+                      <option value="">Select order type...</option>
+                      <option value="Dine-in">Dine-in</option>
+                      <option value="Delivery">Delivery</option>
+                      <option value="Pickup">Pickup</option>
+                    </select>
                   </div>
 
                   <div>
