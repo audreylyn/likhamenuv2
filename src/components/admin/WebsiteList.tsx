@@ -29,6 +29,7 @@ interface Website {
   createdat: string;
 }
 import { DEFAULT_THEMES } from "../../lib/themes";
+import { PLANS, ServicePlan } from "../../lib/plans";
 
 // Section definitions
 const SECTION_DEFINITIONS = [
@@ -60,12 +61,37 @@ export const WebsiteList: React.FC = () => {
     title: "",
     subdomain: "",
     selectedTheme: "warm-bakery",
+    selectedPlan: "basic", // Default plan
   });
 
-  // Default enabled sections (all sections)
+  // Default enabled sections based on Basic Plan
   const [enabledSections, setEnabledSections] = useState<Set<string>>(
-    new Set(SECTION_DEFINITIONS.map((s) => s.name)),
+    new Set(PLANS.find(p => p.id === "basic")?.sections || []),
   );
+
+  const handlePlanChange = (planId: string) => {
+    setNewWebsite(prev => ({ ...prev, selectedPlan: planId }));
+
+    if (planId === "custom") return;
+
+    const plan = PLANS.find(p => p.id === planId);
+    if (plan) {
+      setEnabledSections(new Set(plan.sections));
+    }
+  };
+
+  const toggleSection = (sectionName: string) => {
+    const newSet = new Set(enabledSections);
+    if (newSet.has(sectionName)) {
+      newSet.delete(sectionName);
+    } else {
+      newSet.add(sectionName);
+    }
+    setEnabledSections(newSet);
+
+    // Switch to custom plan if manual changes are made
+    setNewWebsite(prev => ({ ...prev, selectedPlan: "custom" }));
+  };
 
   useEffect(() => {
     loadWebsites();
@@ -145,8 +171,13 @@ export const WebsiteList: React.FC = () => {
       } else {
         alert("Website created! Note: Could not auto-populate content - you may need to add content manually or ensure a 'golden-crumb' template website exists.");
       }
-      setNewWebsite({ title: "", subdomain: "", selectedTheme: "warm-bakery" });
-      setEnabledSections(new Set(SECTION_DEFINITIONS.map((s) => s.name)));
+      setNewWebsite({
+        title: "",
+        subdomain: "",
+        selectedTheme: "warm-bakery",
+        selectedPlan: "basic",
+      });
+      setEnabledSections(new Set(PLANS.find(p => p.id === "basic")?.sections || []));
       loadWebsites();
     } catch (error: any) {
       alert(`Error: ${error.message}`);
@@ -304,6 +335,45 @@ export const WebsiteList: React.FC = () => {
               </div>
             </div>
 
+            {/* Plan Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Service Plan
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {PLANS.map((plan) => (
+                  <button
+                    key={plan.id}
+                    type="button"
+                    onClick={() => handlePlanChange(plan.id)}
+                    className={`p-3 rounded-lg border-2 text-left transition ${newWebsite.selectedPlan === plan.id
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300"
+                      }`}
+                  >
+                    <div className="font-semibold text-gray-900">
+                      {plan.name}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      ₱{plan.price.toLocaleString()}
+                    </div>
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  disabled
+                  className={`p-3 rounded-lg border-2 text-left transition ${newWebsite.selectedPlan === "custom"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-transparent opacity-50"
+                    }`}
+                  style={{ display: newWebsite.selectedPlan === "custom" ? "block" : "none" }}
+                >
+                  <div className="font-semibold text-gray-900">Custom</div>
+                  <div className="text-sm text-gray-600">Manual Selection</div>
+                </button>
+              </div>
+            </div>
+
             {/* Section Toggle */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -314,15 +384,7 @@ export const WebsiteList: React.FC = () => {
                   <button
                     key={section.name}
                     type="button"
-                    onClick={() => {
-                      const newSet = new Set(enabledSections);
-                      if (newSet.has(section.name)) {
-                        newSet.delete(section.name);
-                      } else {
-                        newSet.add(section.name);
-                      }
-                      setEnabledSections(newSet);
-                    }}
+                    onClick={() => toggleSection(section.name)}
                     className={`px-3 py-1 rounded-full text-sm transition ${enabledSections.has(section.name)
                       ? "bg-green-100 text-green-700 border border-green-300"
                       : "bg-gray-100 text-gray-600 border border-gray-200"
