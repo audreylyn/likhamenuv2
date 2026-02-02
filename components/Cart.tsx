@@ -30,7 +30,6 @@ export const Cart: React.FC<CartProps> = ({
     message: ''
   });
   const [facebookMessengerId, setFacebookMessengerId] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { websiteData } = useWebsite();
 
   const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -68,7 +67,7 @@ export const Cart: React.FC<CartProps> = ({
     console.log('No Messenger ID found in websiteData');
   };
 
-  const handleCheckout = async () => {
+  const handleCheckout = () => {
     if (!facebookMessengerId || items.length === 0) {
       if (!facebookMessengerId) {
         alert("Facebook Messenger is not configured for this store.");
@@ -76,56 +75,7 @@ export const Cart: React.FC<CartProps> = ({
       return;
     }
 
-    setIsSubmitting(true);
-
-    // Save order to Google Spreadsheet
-    const orderTrackingUrl = import.meta.env.VITE_ORDER_TRACKING_URL;
-    console.log('Order Tracking URL:', orderTrackingUrl);
-    console.log('Website Data:', websiteData?.id, websiteData?.title);
-    
-    if (orderTrackingUrl && websiteData) {
-      try {
-        const orderPayload = {
-          websiteId: websiteData.id,
-          websiteTitle: websiteData.title || 'Unknown Website',
-          order: {
-            customerName: customerDetails.name,
-            email: customerDetails.email,
-            contactNumber: customerDetails.contactNumber,
-            orderType: customerDetails.orderType,
-            location: customerDetails.location,
-            note: customerDetails.message,
-            total: total,
-            totalFormatted: `₱${total.toLocaleString()}`,
-            items: items.map(item => ({
-              name: item.name,
-              quantity: item.quantity,
-              unitPrice: item.price,
-              subtotal: item.price * item.quantity
-            }))
-          }
-        };
-
-        console.log('Sending order payload:', orderPayload);
-
-        await fetch(orderTrackingUrl, {
-          method: 'POST',
-          mode: 'no-cors', // Google Apps Script requires no-cors
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(orderPayload)
-        });
-        console.log('Order request sent to spreadsheet');
-      } catch (error) {
-        console.error('Failed to save order to spreadsheet:', error);
-        // Continue with checkout even if tracking fails
-      }
-    } else {
-      console.warn('Order tracking skipped - URL or websiteData missing');
-    }
-
-    // Construct message for messenger
+    // Construct message for messenger FIRST (instant checkout)
     const lines: string[] = [];
     lines.push('New Order Request');
     lines.push('------------------');
@@ -149,20 +99,54 @@ export const Cart: React.FC<CartProps> = ({
 
     const fullMessage = lines.join('\n');
     const encodedMessage = encodeURIComponent(fullMessage);
+    const messengerUrl = `https://m.me/${facebookMessengerId}?text=${encodedMessage}`;
 
-    // Ensure we always use HTTPS (required for m.me)
-    const url = `https://m.me/${facebookMessengerId}?text=${encodedMessage}`;
+    // Save order to Google Spreadsheet in BACKGROUND (fire and forget)
+    const orderTrackingUrl = import.meta.env.VITE_ORDER_TRACKING_URL;
+    if (orderTrackingUrl && websiteData) {
+      const orderPayload = {
+        websiteId: websiteData.id,
+        websiteTitle: websiteData.title || 'Unknown Website',
+        order: {
+          customerName: customerDetails.name,
+          email: customerDetails.email,
+          contactNumber: customerDetails.contactNumber,
+          orderType: customerDetails.orderType,
+          location: customerDetails.location,
+          note: customerDetails.message,
+          total: total,
+          totalFormatted: `₱${total.toLocaleString()}`,
+          items: items.map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            unitPrice: item.price,
+            subtotal: item.price * item.quantity
+          }))
+        }
+      };
 
-    // Clear cart and close first (before navigation)
+      // Use sendBeacon for reliable background delivery (won't block navigation)
+      const blob = new Blob([JSON.stringify(orderPayload)], { type: 'application/json' });
+      const sent = navigator.sendBeacon(orderTrackingUrl, blob);
+      
+      // Fallback to fetch if sendBeacon fails
+      if (!sent) {
+        fetch(orderTrackingUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderPayload)
+        }).catch(() => {}); // Ignore errors, don't block checkout
+      }
+    }
+
+    // Clear cart and navigate IMMEDIATELY
     onClear();
     setCustomerDetails({ name: '', email: '', contactNumber: '', orderType: '', location: '', message: '' });
-    setIsSubmitting(false);
     onClose();
-
-    // Small delay to allow cart to close, then open Messenger
-    setTimeout(() => {
-      window.location.href = url;
-    }, 100);
+    
+    // Navigate to Messenger instantly
+    window.location.href = messengerUrl;
   };
 
   return (
@@ -352,20 +336,11 @@ export const Cart: React.FC<CartProps> = ({
             <div className="p-6 border-t border-gray-100 bg-gray-50">
               <button
                 onClick={handleCheckout}
-                disabled={items.length === 0 || !customerDetails.name || !customerDetails.location || isSubmitting}
+                disabled={items.length === 0 || !customerDetails.name || !customerDetails.location}
                 className="w-full py-4 bg-bakery-dark text-white rounded-xl font-serif font-bold text-lg hover:bg-bakery-primary transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Send size={20} />
-                    Checkout via Messenger
-                  </>
-                )}
+                <Send size={20} />
+                Checkout via Messenger
               </button>
             </div>
           </motion.div>
