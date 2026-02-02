@@ -250,6 +250,7 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
   // loadWebsiteData - for programmatic changes (changeWebsite, refreshContent)
   const loadWebsiteData = async (websiteId: string) => {
     try {
+      console.log('[WebsiteContext] Loading fresh data for websiteId:', websiteId);
       const { data: website, error } = await supabase
         .from("websites")
         .select(
@@ -259,6 +260,8 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
         .single();
 
       if (error) throw error;
+
+      console.log('[WebsiteContext] Loaded website data, hero content:', website?.content?.hero);
 
       // Don't cache - always use fresh data
       // if (website?.subdomain) {
@@ -277,7 +280,7 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
     await loadWebsiteData(websiteId);
   };
 
-  const refreshContent = () => {
+  const refreshContent = async () => {
     // Increment version to trigger components to refetch
     setContentVersion((prev) => prev + 1);
 
@@ -288,9 +291,9 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     });
 
-    // Also reload website data if we have a current website
+    // Reload website data if we have a current website - await it
     if (currentWebsite) {
-      loadWebsiteData(currentWebsite).catch(console.error);
+      await loadWebsiteData(currentWebsite);
     }
   };
 

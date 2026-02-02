@@ -100,8 +100,8 @@ export const EditorProvider: React.FC<{
         console.log(`✅ Saved content.${section}.${field}`);
         setHasChanges(true);
 
-        // Refresh content to invalidate cache and update UI
-        refreshContent();
+        // Refresh content to invalidate cache and update UI - await it
+        await refreshContent();
       } catch (error) {
         console.error(`Error saving ${section}.${field}:`, error);
         throw error;
@@ -156,8 +156,8 @@ export const EditorProvider: React.FC<{
         console.log(`✅ Saved content.${section}`);
         setHasChanges(true);
 
-        // Refresh content to invalidate cache and update UI
-        refreshContent();
+        // Refresh content to invalidate cache and update UI - await it
+        await refreshContent();
       } catch (error) {
         console.error(`Error saving ${section}:`, error);
         throw error;

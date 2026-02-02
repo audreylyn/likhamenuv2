@@ -52,16 +52,21 @@ export const Hero: React.FC = () => {
   const { isEditing, saveField } = useEditor();
   const { websiteData, loading: websiteLoading, contentVersion } = useWebsite();
 
+  // Sync content from websiteData whenever it changes
   useEffect(() => {
     if (!websiteLoading) {
       setLoading(false);
+      // Always update from websiteData when contentVersion changes
       if (websiteData?.content?.hero) {
-        setContent(websiteData.content.hero as HeroContent);
+        console.log('[Hero] Updating content from websiteData, version:', contentVersion, 'hero:', websiteData.content.hero);
+        // Create a deep copy to ensure React detects changes
+        setContent(JSON.parse(JSON.stringify(websiteData.content.hero)) as HeroContent);
       } else {
+        console.log('[Hero] No hero content, using default');
         setContent(DEFAULT_HERO);
       }
     }
-  }, [websiteData?.content?.hero, websiteLoading, contentVersion]);
+  }, [websiteData, websiteLoading, contentVersion]);
 
   const slides = (content?.slides as HeroSlide[]) || [];
 
