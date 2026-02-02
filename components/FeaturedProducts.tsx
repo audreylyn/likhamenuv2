@@ -242,7 +242,7 @@ export const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
                 <div className="absolute inset-x-0 bottom-0 p-6">
                   <button
                     onClick={() => addToCart(item)}
-                    className="w-full bg-bakery-light text-bakery-dark font-serif font-bold py-3.5 rounded-xl shadow-lg hover:bg-bakery-primary hover:text-white transition-colors flex items-center justify-center gap-2"
+                    className="w-full bg-bakery-primary text-white font-serif font-bold py-3.5 rounded-xl shadow-lg hover:bg-bakery-dark transition-colors flex items-center justify-center gap-2"
                   >
                     <ShoppingBag size={18} />
                     Add to Order

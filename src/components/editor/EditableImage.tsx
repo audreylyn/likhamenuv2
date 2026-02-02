@@ -119,16 +119,12 @@ export const EditableImage: React.FC<EditableImageProps> = ({
     if (!src) {
       return null;
     }
-    return (
-      <div className={`${containerClassName} ${aspectRatioClass}`}>
-        <img src={src} alt={alt} className={className} />
-      </div>
-    );
+    return <img src={src} alt={alt} className={className} />;
   }
 
   // Editing mode
   return (
-    <div className={`relative ${containerClassName} ${aspectRatioClass}`}>
+    <div className={`relative w-full h-full ${containerClassName} ${aspectRatioClass}`}>
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -142,7 +138,7 @@ export const EditableImage: React.FC<EditableImageProps> = ({
       {src ? (
         <img src={src} alt={alt} className={`${className} ${isUploading ? 'opacity-50' : ''}`} />
       ) : (
-        <div className={`${className} bg-gray-200 flex items-center justify-center text-gray-400`}>
+        <div className={`w-full h-full ${className} bg-gray-200 flex items-center justify-center text-gray-400`}>
           <div className="text-center p-4">
             <ImageIcon size={48} className="mx-auto mb-2 opacity-50" />
             <p className="text-sm">{placeholder}</p>

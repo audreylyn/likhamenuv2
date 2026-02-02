@@ -462,10 +462,11 @@ export const Contact: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`w-full py-4 px-6 rounded-lg font-serif font-bold text-white text-lg shadow-md transition-all flex items-center justify-center space-x-2 ${isSubmitting
-                  ? "bg-bakery-dark/40 cursor-not-allowed"
-                  : "bg-bakery-primary hover:bg-bakery-dark hover:shadow-lg"
-                  }`}
+                className={`w-full py-4 px-6 rounded-lg font-serif font-bold text-white text-lg shadow-md transition-all flex items-center justify-center space-x-2 ${
+                  isSubmitting
+                    ? "bg-bakery-primary/70 cursor-not-allowed"
+                    : "bg-bakery-primary hover:bg-bakery-dark hover:shadow-lg"
+                }`}
               >
                 {isSubmitting ? (
                   <span>Sending...</span>
