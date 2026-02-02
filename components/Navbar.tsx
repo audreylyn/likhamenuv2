@@ -191,6 +191,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Cart Button */}
             <button
               onClick={onOpenCart}
+              aria-label="Open cart"
               className={`flex items-center gap-2 px-5 py-2 rounded-full font-serif transition-all duration-300 shadow-lg group relative ${
                 scrolled
                   ? "bg-bakery-dark text-white hover:bg-bakery-primary"
@@ -211,6 +212,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="md:hidden flex items-center gap-4">
             <button
               onClick={onOpenCart}
+              aria-label="Open cart"
               className={`relative p-2 rounded-full transition-colors ${
                 scrolled
                   ? "bg-bakery-dark text-white"
@@ -227,6 +229,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               onClick={() => setIsOpen(!isOpen)}
+              aria-label={isOpen ? "Close menu" : "Open menu"}
               className={`focus:outline-none transition-colors duration-300 ${
                 scrolled
                   ? "text-bakery-dark hover:text-bakery-primary"
