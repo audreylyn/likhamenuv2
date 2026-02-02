@@ -7,8 +7,6 @@ import {
   Youtube,
   MessageCircle,
   Share2,
-  Check,
-  Loader2,
   X,
   Plus,
 } from "lucide-react";
@@ -25,15 +23,13 @@ interface SocialLink {
 }
 
 export const Footer: React.FC = () => {
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "success">("idle");
   const [loading, setLoading] = useState(true);
   const [brandName, setBrandName] = useState("");
   const [aboutText, setAboutText] = useState("");
   const [quickLinksTitle, setQuickLinksTitle] = useState("Quick Links");
-  const [newsletterTitle, setNewsletterTitle] = useState("Stay in the Loop");
+  const [newsletterTitle, setNewsletterTitle] = useState("Contact Us");
   const [newsletterDescription, setNewsletterDescription] = useState(
-    "Join our newsletter for special offers.",
+    "123 Main Street, City, Country\n+1 234 567 8900",
   );
   const [copyrightText, setCopyrightText] = useState("");
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
@@ -65,11 +61,19 @@ export const Footer: React.FC = () => {
     if (footerData) {
       setFooterContent(footerData);
       if (footerData.about_text) setAboutText(footerData.about_text);
-      if (footerData.copyright_text) setCopyrightText(footerData.copyright_text);
-      else {
+      if (footerData.copyright_text) {
+        setCopyrightText(footerData.copyright_text);
+      } else {
         // Fallback dynamic copyright if not explicitly saved
         const websiteName = siteTitle || (navbarData?.brand_name || "Website");
         setCopyrightText(`© ${new Date().getFullYear()} ${websiteName}. All rights reserved.`);
+      }
+
+      if (typeof footerData.newsletter_heading === "string") {
+        setNewsletterTitle(footerData.newsletter_heading);
+      }
+      if (typeof footerData.newsletter_placeholder === "string") {
+        setNewsletterDescription(footerData.newsletter_placeholder);
       }
     } else {
       // Defaults
@@ -107,21 +111,6 @@ export const Footer: React.FC = () => {
       // For now this matches original logic.
       setSocialLinks(links);
     }
-  };
-
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-
-    setStatus("loading");
-
-    // Simulate API call
-    setTimeout(() => {
-      setStatus("success");
-      setEmail("");
-      // Reset back to idle after showing success message for a while (optional)
-      // setTimeout(() => setStatus('idle'), 5000);
-    }, 1500);
   };
 
   // Don't render footer until data is loaded to prevent flash
@@ -252,54 +241,17 @@ export const Footer: React.FC = () => {
                   value={newsletterDescription}
                   onSave={async (newValue) => {
                     setNewsletterDescription(newValue);
-                    // Assuming 'newsletter_placeholder' or similar field? 
-                    // Or just no field for description in schema? 
-                    // Valid fields: about_text, copyright_text, footer_columns, show_social_links, show_newsletter, newsletter_heading, newsletter_placeholder
-                    // Let's us newsletter_placeholder for now or skip if not appropriate.
-                    // Actually maybe it's not saved in DB schema?
+                    // Save as placeholder text or new field if we had one
+                    await saveField("footer", "newsletter_placeholder", newValue);
                   }}
                   tag="p"
-                  className="font-sans text-bakery-sand text-sm"
+                  multiline
+                  className="font-sans text-bakery-sand text-sm whitespace-pre-line text-center md:text-right"
                 />
               ) : (
-                <p className="font-sans text-bakery-sand text-sm">
+                <p className="font-sans text-bakery-sand text-sm whitespace-pre-line text-center md:text-right">
                   {newsletterDescription}
                 </p>
-              )}
-
-              {status === "success" ? (
-                <div className="bg-green-500/20 border border-green-500/30 text-green-100 px-4 py-3 rounded-lg w-full max-w-xs flex items-center justify-center gap-2 animate-in fade-in slide-in-from-bottom-2">
-                  <Check size={18} />
-                  <span className="font-sans font-medium text-sm">
-                    Welcome to the family!
-                  </span>
-                </div>
-              ) : (
-                <form
-                  onSubmit={handleSubscribe}
-                  className="flex w-full max-w-xs relative"
-                >
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Your email"
-                    disabled={status === "loading"}
-                    className="bg-white/10 border border-white/20 rounded-l-lg px-4 py-2 text-white placeholder-white/50 focus:outline-none focus:bg-white/20 w-full disabled:opacity-50 transition-colors"
-                  />
-                  <button
-                    type="submit"
-                    disabled={status === "loading"}
-                    className="bg-bakery-primary hover:bg-bakery-accent text-white px-4 py-2 rounded-r-lg font-serif font-bold transition-colors disabled:opacity-70 disabled:cursor-not-allowed min-w-[80px] flex justify-center items-center"
-                  >
-                    {status === "loading" ? (
-                      <Loader2 size={20} className="animate-spin" />
-                    ) : (
-                      "Join"
-                    )}
-                  </button>
-                </form>
               )}
 
               <div className="flex flex-wrap items-center gap-3 mt-2">
