@@ -45,10 +45,14 @@ export const Cart: React.FC<CartProps> = ({
   const loadFacebookMessengerId = () => {
     if (!websiteData) return;
 
+    console.log('Loading Messenger ID from websiteData:', websiteData);
+    console.log('Messenger config:', websiteData.messenger);
+
     // Try to get Messenger ID from various sources in priority order
     // 1. Dedicated messenger config
     const messengerConfig = websiteData.messenger as any;
     if (messengerConfig?.page_id) {
+      console.log('Found Messenger ID:', messengerConfig.page_id);
       setFacebookMessengerId(messengerConfig.page_id);
       return;
     }
@@ -56,9 +60,12 @@ export const Cart: React.FC<CartProps> = ({
     // 2. Contact info social links (custom field logic if exists)
     const contactContent = websiteData.content?.contact as any;
     if (contactContent?.social_links?.facebook_messenger) {
+      console.log('Found Messenger ID from contact:', contactContent.social_links.facebook_messenger);
       setFacebookMessengerId(contactContent.social_links.facebook_messenger);
       return;
     }
+
+    console.log('No Messenger ID found in websiteData');
   };
 
   const handleCheckout = async () => {
