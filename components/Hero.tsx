@@ -283,7 +283,7 @@ export const Hero: React.FC = () => {
 
       {/* Editor Controls - Outside background div for proper z-index */}
       {isEditing && (
-        <div className="absolute bottom-4 left-4 flex flex-col gap-2 z-50">
+        <div className="absolute bottom-24 left-4 flex flex-col gap-2 z-30">
           {/* Hidden file input */}
           <input
             ref={fileInputRef}

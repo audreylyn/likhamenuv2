@@ -78,7 +78,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   // Show minimal navbar while loading
   if (loading) {
     return (
-      <nav className="fixed w-full z-40 bg-transparent py-6">
+      <nav className="fixed w-full z-30 bg-transparent py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex-shrink-0 flex items-center gap-2">
@@ -94,7 +94,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <nav
-      className={`fixed w-full z-40 transition-all duration-300 ${
+      className={`fixed w-full z-30 transition-all duration-300 ${
         scrolled
           ? "bg-white/95 backdrop-blur-sm shadow-md py-2"
           : "bg-transparent py-6"
@@ -241,7 +241,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Mobile Menu Overlay */}
       {isOpen && (
-        <div className="md:hidden absolute top-full left-0 w-full bg-bakery-cream shadow-lg border-t border-bakery-sand animate-in slide-in-from-top-2 duration-200">
+        <div className="md:hidden absolute top-full left-0 w-full bg-bakery-cream shadow-lg border-t border-bakery-sand animate-in slide-in-from-top-2 duration-200 z-40">
           <div className="px-4 pt-2 pb-6 space-y-2">
             {navItems.map((link: any, index: number) => {
               const linkName = link.label || link.name || "Link";
