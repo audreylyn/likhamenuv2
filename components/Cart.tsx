@@ -30,6 +30,7 @@ export const Cart: React.FC<CartProps> = ({
     message: ''
   });
   const [facebookMessengerId, setFacebookMessengerId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { websiteData } = useWebsite();
 
   const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -60,12 +61,54 @@ export const Cart: React.FC<CartProps> = ({
     }
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (!facebookMessengerId || items.length === 0) {
       if (!facebookMessengerId) {
         alert("Facebook Messenger is not configured for this store.");
       }
       return;
+    }
+
+    setIsSubmitting(true);
+
+    // Save order to Google Spreadsheet
+    const orderTrackingUrl = import.meta.env.VITE_ORDER_TRACKING_URL;
+    if (orderTrackingUrl && websiteData) {
+      try {
+        const orderPayload = {
+          websiteId: websiteData.id,
+          websiteTitle: websiteData.title || 'Unknown Website',
+          order: {
+            customerName: customerDetails.name,
+            email: customerDetails.email,
+            contactNumber: customerDetails.contactNumber,
+            orderType: customerDetails.orderType,
+            location: customerDetails.location,
+            note: customerDetails.message,
+            total: total,
+            totalFormatted: `₱${total.toLocaleString()}`,
+            items: items.map(item => ({
+              name: item.name,
+              quantity: item.quantity,
+              unitPrice: item.price,
+              subtotal: item.price * item.quantity
+            }))
+          }
+        };
+
+        await fetch(orderTrackingUrl, {
+          method: 'POST',
+          mode: 'no-cors', // Google Apps Script requires no-cors
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(orderPayload)
+        });
+        console.log('Order saved to spreadsheet');
+      } catch (error) {
+        console.error('Failed to save order to spreadsheet:', error);
+        // Continue with checkout even if tracking fails
+      }
     }
 
     // Construct message for messenger
@@ -99,6 +142,7 @@ export const Cart: React.FC<CartProps> = ({
     // Clear cart and close first (before navigation)
     onClear();
     setCustomerDetails({ name: '', email: '', contactNumber: '', orderType: '', location: '', message: '' });
+    setIsSubmitting(false);
     onClose();
 
     // Small delay to allow cart to close, then open Messenger
@@ -294,11 +338,20 @@ export const Cart: React.FC<CartProps> = ({
             <div className="p-6 border-t border-gray-100 bg-gray-50">
               <button
                 onClick={handleCheckout}
-                disabled={items.length === 0 || !customerDetails.name || !customerDetails.location}
+                disabled={items.length === 0 || !customerDetails.name || !customerDetails.location || isSubmitting}
                 className="w-full py-4 bg-bakery-dark text-white rounded-xl font-serif font-bold text-lg hover:bg-bakery-primary transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                <Send size={20} />
-                Checkout via Messenger
+                {isSubmitting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Send size={20} />
+                    Checkout via Messenger
+                  </>
+                )}
               </button>
             </div>
           </motion.div>
