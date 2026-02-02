@@ -175,9 +175,11 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
       // Fetch all statuses - the frontend (PublicSite.tsx) will handle hiding content if not published
       const statusFilter = "";
 
+      // Use cache: 'reload' to prevent browser caching while keeping the URL clean for PostgREST
       const response = await fetch(
         `${supabaseUrl}/rest/v1/websites?subdomain=eq.${subdomain}${statusFilter}&select=id,title,subdomain,status,theme,content,enabledsections,messenger,contactformconfig`,
         {
+          cache: 'reload',
           headers: {
             apikey: supabaseKey,
             Authorization: `Bearer ${supabaseKey}`,
