@@ -17,84 +17,7 @@ import {
 } from "lucide-react";
 import { populateDefaultContent } from "../../lib/default-content";
 
-// Default theme colors
-const DEFAULT_THEMES = [
-  {
-    id: "warm-bakery",
-    name: "Warm Bakery",
-    description: "Warm browns and golden tones",
-    colors: {
-      primary: "#8B4513",
-      accent: "#D2691E",
-      cream: "#FFF8E7",
-      dark: "#5D4037",
-      light: "#FFFFFF",
-      text: "#5D4037",
-      beige: "#F5F5DC",
-      sand: "#E6DCC3",
-    },
-  },
-  {
-    id: "modern-minimal",
-    name: "Modern Minimal",
-    description: "Clean black and white",
-    colors: {
-      primary: "#1a1a1a",
-      accent: "#007bff",
-      cream: "#f8f9fa",
-      dark: "#1a1a1a",
-      light: "#ffffff",
-      text: "#1a1a1a",
-      beige: "#e9ecef",
-      sand: "#dee2e6",
-    },
-  },
-  {
-    id: "fresh-green",
-    name: "Fresh & Green",
-    description: "Natural green tones",
-    colors: {
-      primary: "#2E8B57",
-      accent: "#3CB371",
-      cream: "#F0FFF0",
-      dark: "#1C4428",
-      light: "#ffffff",
-      text: "#1C4428",
-      beige: "#E8F5E9",
-      sand: "#C8E6C9",
-    },
-  },
-  {
-    id: "ocean-blue",
-    name: "Ocean Blue",
-    description: "Cool blue vibes",
-    colors: {
-      primary: "#1E90FF",
-      accent: "#00CED1",
-      cream: "#F0F8FF",
-      dark: "#191970",
-      light: "#ffffff",
-      text: "#191970",
-      beige: "#E3F2FD",
-      sand: "#BBDEFB",
-    },
-  },
-  {
-    id: "sunset-warm",
-    name: "Sunset Warm",
-    description: "Warm sunset colors",
-    colors: {
-      primary: "#FF6B6B",
-      accent: "#FFD93D",
-      cream: "#FFF5EE",
-      dark: "#8B0000",
-      light: "#ffffff",
-      text: "#8B0000",
-      beige: "#FFEBEE",
-      sand: "#FFCDD2",
-    },
-  },
-];
+import { DEFAULT_THEMES } from "../../lib/themes";
 
 export const WebsiteEditor: React.FC = () => {
   const { websiteId } = useParams();
@@ -118,7 +41,7 @@ export const WebsiteEditor: React.FC = () => {
   );
   const [knowledgeBaseSheetsUrl, setKnowledgeBaseSheetsUrl] = useState("");
   const [messengerPageId, setMessengerPageId] = useState("");
-  
+
   // Contact form config state
   const [contactFormEnabled, setContactFormEnabled] = useState(false);
   const [contactFormAppsScriptUrl, setContactFormAppsScriptUrl] = useState("");
@@ -178,13 +101,13 @@ export const WebsiteEditor: React.FC = () => {
       // Messenger from messenger JSONB
       const messenger = websiteData.messenger || {};
       setMessengerPageId(messenger.page_id || "");
-      
+
       // Contact form config from contactformconfig JSONB
       const contactFormConfig = websiteData.contactformconfig || {};
       setContactFormEnabled(contactFormConfig.enabled || false);
       setContactFormAppsScriptUrl(
-        contactFormConfig.appsScriptUrl || 
-        import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL || 
+        contactFormConfig.appsScriptUrl ||
+        import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL ||
         ""
       );
       setContactFormClientId(contactFormConfig.clientId || "");
@@ -422,11 +345,10 @@ export const WebsiteEditor: React.FC = () => {
               <button
                 key={theme.id}
                 onClick={() => setSelectedTheme(theme.id)}
-                className={`p-4 rounded-lg border-2 transition text-left ${
-                  selectedTheme === theme.id
+                className={`p-4 rounded-lg border-2 transition text-left ${selectedTheme === theme.id
                     ? "border-blue-500 bg-blue-50"
                     : "border-gray-200 hover:border-gray-300"
-                }`}
+                  }`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-semibold text-gray-900">{theme.name}</h3>
@@ -495,14 +417,12 @@ export const WebsiteEditor: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setContactFormEnabled(!contactFormEnabled)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    contactFormEnabled ? "bg-green-600" : "bg-gray-300"
-                  }`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${contactFormEnabled ? "bg-green-600" : "bg-gray-300"
+                    }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      contactFormEnabled ? "translate-x-6" : "translate-x-1"
-                    }`}
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${contactFormEnabled ? "translate-x-6" : "translate-x-1"
+                      }`}
                   />
                 </button>
               </div>
@@ -527,16 +447,14 @@ export const WebsiteEditor: React.FC = () => {
                   </div>
 
                   {/* Status Indicator */}
-                  <div className={`p-3 rounded-lg border ${
-                    contactFormClientId
+                  <div className={`p-3 rounded-lg border ${contactFormClientId
                       ? "bg-green-50 border-green-200"
                       : "bg-yellow-50 border-yellow-200"
-                  }`}>
-                    <p className={`text-sm ${
-                      contactFormClientId
+                    }`}>
+                    <p className={`text-sm ${contactFormClientId
                         ? "text-green-800"
                         : "text-yellow-800"
-                    }`}>
+                      }`}>
                       {contactFormClientId ? (
                         <>
                           <strong>✓ Configuration complete.</strong> Contact form submissions will be emailed.
@@ -585,14 +503,12 @@ export const WebsiteEditor: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setChatSupportEnabled(!chatSupportEnabled)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    chatSupportEnabled ? "bg-blue-600" : "bg-gray-300"
-                  }`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${chatSupportEnabled ? "bg-blue-600" : "bg-gray-300"
+                    }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      chatSupportEnabled ? "translate-x-6" : "translate-x-1"
-                    }`}
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${chatSupportEnabled ? "translate-x-6" : "translate-x-1"
+                      }`}
                   />
                 </button>
               </div>
