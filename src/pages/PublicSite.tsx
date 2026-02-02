@@ -138,7 +138,29 @@ export const PublicSite: React.FC = () => {
         : new URLSearchParams();
     const siteParam = params.get("site") || params.get("website");
 
-    // Check if website exists but is inactive
+    // Check if website exists but is suspended or draft
+    const isSuspended =
+      websiteData?.status === "suspended" || websiteData?.status === "draft";
+
+    if (isSuspended) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center max-w-md p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Website Unavailable
+            </h2>
+            <p className="text-gray-600 mb-4">
+              This website is currently {websiteData?.status || "unavailable"}.
+            </p>
+            <p className="text-sm text-gray-500">
+              Please contact the website administrator for more information.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // Check if website exists but is inactive (legacy check)
     const inactiveWebsite =
       typeof window !== "undefined"
         ? sessionStorage.getItem("inactive_website")

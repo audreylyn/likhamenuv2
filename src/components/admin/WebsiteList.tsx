@@ -157,7 +157,8 @@ export const WebsiteList: React.FC = () => {
 
   const handleToggleStatus = async (id: string, currentStatus: string) => {
     try {
-      const newStatus = currentStatus === "published" ? "draft" : "published";
+      // If published, switch to suspended. Otherwise (draft/suspended), switch to published.
+      const newStatus = currentStatus === "published" ? "suspended" : "published";
 
       const { error } = await (supabase
         .from("websites") as any)
@@ -380,9 +381,11 @@ export const WebsiteList: React.FC = () => {
                   </p>
                 </div>
                 <span
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${website.status === "published"
+                  className={`px-3 py-1 rounded-full text-xs font-medium ${website.status === "published"
                     ? "bg-green-100 text-green-700"
-                    : "bg-gray-100 text-gray-600"
+                    : website.status === "suspended"
+                      ? "bg-red-100 text-red-700"
+                      : "bg-gray-100 text-gray-600"
                     }`}
                 >
                   {website.status}
@@ -417,7 +420,7 @@ export const WebsiteList: React.FC = () => {
                   onClick={() => handleToggleStatus(website.id, website.status)}
                   className="flex items-center justify-center gap-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition"
                   title={
-                    website.status === "published" ? "Unpublish" : "Publish"
+                    website.status === "published" ? "Suspend Website" : "Publish Website"
                   }
                 >
                   {website.status === "published" ? (

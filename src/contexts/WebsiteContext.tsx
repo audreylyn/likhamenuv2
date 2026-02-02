@@ -178,11 +178,8 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
       const isLocalhost =
         hostname === "localhost" || hostname.startsWith("127.");
 
-      // Draft access rules:
-      // - Localhost: allow draft & published
-      // - Query-param access (?site=): allow draft & published (admin preview)
-      // - Subdomain access: published only
-      const statusFilter = isLocalhost || allowDraft ? "" : "&status=eq.published";
+      // Fetch all statuses - the frontend (PublicSite.tsx) will handle hiding content if not published
+      const statusFilter = "";
 
       const response = await fetch(
         `${supabaseUrl}/rest/v1/websites?subdomain=eq.${subdomain}${statusFilter}&select=id,title,subdomain,status,theme,content,enabledsections,messenger,contactformconfig`,
@@ -321,10 +318,10 @@ export const useWebsite = () => {
     return {
       currentWebsite: null,
       websiteData: null,
-      setCurrentWebsite: async () => {},
+      setCurrentWebsite: async () => { },
       loading: false,
       sectionVisibility: {},
-      refreshContent: () => {},
+      refreshContent: () => { },
       contentVersion: 0,
     };
   }
