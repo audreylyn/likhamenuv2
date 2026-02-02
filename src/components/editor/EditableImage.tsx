@@ -33,7 +33,9 @@ export const EditableImage: React.FC<EditableImageProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showOptions, setShowOptions] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   const aspectRatioClass = {
     square: 'aspect-square',
@@ -97,22 +99,6 @@ export const EditableImage: React.FC<EditableImageProps> = ({
     }
   };
 
-  const handleUrlInput = async () => {
-    const url = prompt('Enter image URL:', src);
-    if (url === null) return; // User cancelled
-
-    try {
-      setIsUploading(true);
-      await onSave(url);
-      setShowOptions(false);
-    } catch (err: any) {
-      console.error('Save error:', err);
-      setError(err.message || 'Failed to save image URL');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
   const handleRemoveImage = async () => {
     if (!window.confirm('Remove this image?')) return;
 
@@ -142,7 +128,7 @@ export const EditableImage: React.FC<EditableImageProps> = ({
 
   // Editing mode
   return (
-    <div className={`relative group ${containerClassName} ${aspectRatioClass}`}>
+    <div className={`relative ${containerClassName} ${aspectRatioClass}`}>
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -166,41 +152,52 @@ export const EditableImage: React.FC<EditableImageProps> = ({
 
       {/* Loading overlay */}
       {isUploading && (
-        <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded">
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded z-20">
           <Loader2 className="animate-spin text-white" size={32} />
         </div>
       )}
 
-      {/* Edit button - shows on hover */}
+      {/* Edit button - always visible in edit mode */}
       {!isUploading && (
         <button
-          onClick={() => setShowOptions(!showOptions)}
-          className="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+          ref={buttonRef}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (buttonRef.current) {
+              const rect = buttonRef.current.getBoundingClientRect();
+              setMenuPosition({ top: rect.bottom + 4, left: rect.right - 140 });
+            }
+            setShowOptions(!showOptions);
+          }}
+          className="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full shadow-lg z-30 transition-colors"
         >
           <Upload size={16} />
         </button>
       )}
 
-      {/* Options menu */}
+      {/* Options menu - uses fixed positioning to escape overflow:hidden */}
       {showOptions && !isUploading && (
-        <div className="absolute top-12 right-2 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50">
+        <div 
+          className="fixed bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-[9999]"
+          style={{ top: menuPosition.top, left: menuPosition.left }}
+        >
           <button
-            onClick={() => fileInputRef.current?.click()}
+            onClick={(e) => {
+              e.stopPropagation();
+              fileInputRef.current?.click();
+              setShowOptions(false);
+            }}
             className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
           >
             <Upload size={16} />
             Upload Image
           </button>
-          <button
-            onClick={handleUrlInput}
-            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
-          >
-            <ImageIcon size={16} />
-            Enter URL
-          </button>
           {src && (
             <button
-              onClick={handleRemoveImage}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRemoveImage();
+              }}
               className="w-full px-4 py-2 text-left text-sm hover:bg-red-100 text-red-600 flex items-center gap-2"
             >
               <X size={16} />
@@ -212,7 +209,7 @@ export const EditableImage: React.FC<EditableImageProps> = ({
 
       {/* Error message */}
       {error && (
-        <div className="absolute bottom-2 left-2 right-2 bg-red-500 text-white text-xs p-2 rounded">
+        <div className="absolute bottom-2 left-2 right-2 bg-red-500 text-white text-xs p-2 rounded z-30">
           {error}
           <button
             onClick={() => setError(null)}
@@ -227,7 +224,10 @@ export const EditableImage: React.FC<EditableImageProps> = ({
       {showOptions && (
         <div
           className="fixed inset-0 z-40"
-          onClick={() => setShowOptions(false)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowOptions(false);
+          }}
         />
       )}
     </div>

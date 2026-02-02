@@ -226,7 +226,7 @@ export const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
                 />
 
                 {/* Badge */}
-                <div className="absolute top-4 right-4 bg-bakery-light/95 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm z-10">
+                <div className="absolute top-4 left-4 bg-bakery-light/95 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm z-10">
                   <Star
                     size={14}
                     className="text-bakery-accent fill-bakery-accent"
