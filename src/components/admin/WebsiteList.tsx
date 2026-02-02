@@ -83,6 +83,10 @@ export const WebsiteList: React.FC = () => {
     error: "",
   });
 
+  // Show/hide password states
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showModalPassword, setShowModalPassword] = useState(false);
+
   // Default enabled sections based on Basic Plan
   const [enabledSections, setEnabledSections] = useState<Set<string>>(
     new Set(PLANS.find(p => p.id === "basic")?.sections || []),
@@ -334,16 +338,25 @@ export const WebsiteList: React.FC = () => {
               </label>
               <div className="flex items-center gap-2">
                 <Lock size={18} className="text-gray-400" />
-                <input
-                  type="password"
-                  value={newWebsite.password}
-                  onChange={(e) =>
-                    setNewWebsite({ ...newWebsite, password: e.target.value })
-                  }
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900"
-                  placeholder="Enter password to protect editing"
-                  required
-                />
+                <div className="relative flex-1">
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    value={newWebsite.password}
+                    onChange={(e) =>
+                      setNewWebsite({ ...newWebsite, password: e.target.value })
+                    }
+                    className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900"
+                    placeholder="Enter password to protect editing"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-700"
+                  >
+                    {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
               <p className="text-xs text-gray-500 mt-1">
                 This password will be required to edit the website
@@ -620,23 +633,32 @@ export const WebsiteList: React.FC = () => {
                 }
               }}
             >
-              <input
-                type="password"
-                value={passwordModal.inputPassword}
-                onChange={(e) =>
-                  setPasswordModal((prev) => ({
-                    ...prev,
-                    inputPassword: e.target.value,
-                    error: "",
-                  }))
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent mb-2"
-                placeholder="Enter password"
-                autoFocus
-              />
+              <div className="relative">
+                <input
+                  type={showModalPassword ? "text" : "password"}
+                  value={passwordModal.inputPassword}
+                  onChange={(e) =>
+                    setPasswordModal((prev) => ({
+                      ...prev,
+                      inputPassword: e.target.value,
+                      error: "",
+                    }))
+                  }
+                  className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                  placeholder="Enter password"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowModalPassword(!showModalPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-700"
+                >
+                  {showModalPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
 
               {passwordModal.error && (
-                <p className="text-sm text-red-600 mb-3">{passwordModal.error}</p>
+                <p className="text-sm text-red-600 mt-2 mb-1">{passwordModal.error}</p>
               )}
 
               <div className="flex gap-3 mt-4">

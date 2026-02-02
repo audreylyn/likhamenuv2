@@ -15,6 +15,8 @@ import {
   Globe,
   Wand2,
   Lock,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { populateDefaultContent } from "../../lib/default-content";
 
@@ -34,6 +36,7 @@ export const WebsiteEditor: React.FC = () => {
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [storedPassword, setStoredPassword] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Form state
   const [title, setTitle] = useState("");
@@ -282,20 +285,29 @@ export const WebsiteEditor: React.FC = () => {
           </div>
 
           <form onSubmit={handlePasswordSubmit}>
-            <input
-              type="password"
-              value={passwordInput}
-              onChange={(e) => {
-                setPasswordInput(e.target.value);
-                setPasswordError("");
-              }}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent mb-2"
-              placeholder="Enter password"
-              autoFocus
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={passwordInput}
+                onChange={(e) => {
+                  setPasswordInput(e.target.value);
+                  setPasswordError("");
+                }}
+                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                placeholder="Enter password"
+                autoFocus
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-700"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
 
             {passwordError && (
-              <p className="text-sm text-red-600 mb-3">{passwordError}</p>
+              <p className="text-sm text-red-600 mt-2">{passwordError}</p>
             )}
 
             <button
