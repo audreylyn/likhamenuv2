@@ -14,6 +14,7 @@ import {
   MessageCircle,
   Globe,
   Wand2,
+  Lock,
 } from "lucide-react";
 import { populateDefaultContent } from "../../lib/default-content";
 
@@ -27,6 +28,12 @@ export const WebsiteEditor: React.FC = () => {
   const [populating, setPopulating] = useState(false);
   const [website, setWebsite] = useState<any>(null);
   const [hasEmptyContent, setHasEmptyContent] = useState(false);
+
+  // Password protection state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [storedPassword, setStoredPassword] = useState<string | null>(null);
 
   // Form state
   const [title, setTitle] = useState("");
@@ -65,6 +72,20 @@ export const WebsiteEditor: React.FC = () => {
 
       if (websiteError) throw websiteError;
       setWebsite(websiteData);
+
+      // Store password for verification
+      setStoredPassword(websiteData.password || null);
+
+      // Check if already authenticated via sessionStorage
+      const authKey = `website_auth_${websiteId}`;
+      const isAuth = sessionStorage.getItem(authKey) === "true";
+      
+      // If no password set, allow access
+      if (!websiteData.password) {
+        setIsAuthenticated(true);
+      } else if (isAuth) {
+        setIsAuthenticated(true);
+      }
 
       // Check if content is empty (no sections initialized)
       const content = websiteData.content || {};
@@ -229,6 +250,70 @@ export const WebsiteEditor: React.FC = () => {
     return (
       <div className="p-8">
         <p className="text-red-600">Website not found</p>
+      </div>
+    );
+  }
+
+  // Password protection screen
+  if (!isAuthenticated && storedPassword) {
+    const handlePasswordSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (passwordInput === storedPassword) {
+        setIsAuthenticated(true);
+        setPasswordError("");
+        // Store authentication in sessionStorage for this session
+        sessionStorage.setItem(`website_auth_${websiteId}`, "true");
+      } else {
+        setPasswordError("Incorrect password. Please try again.");
+      }
+    };
+
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Lock size={32} className="text-gray-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">Password Required</h2>
+            <p className="text-gray-600 mt-2">
+              Enter the password to edit <strong>{website.title || website.subdomain}</strong>
+            </p>
+          </div>
+
+          <form onSubmit={handlePasswordSubmit}>
+            <input
+              type="password"
+              value={passwordInput}
+              onChange={(e) => {
+                setPasswordInput(e.target.value);
+                setPasswordError("");
+              }}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent mb-2"
+              placeholder="Enter password"
+              autoFocus
+            />
+
+            {passwordError && (
+              <p className="text-sm text-red-600 mb-3">{passwordError}</p>
+            )}
+
+            <button
+              type="submit"
+              className="w-full px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition font-medium mt-4"
+            >
+              Unlock & Edit
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate("/admin/websites")}
+              className="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition mt-3"
+            >
+              Cancel
+            </button>
+          </form>
+        </div>
       </div>
     );
   }

@@ -17,6 +17,8 @@ import {
   EyeOff,
   Sparkles,
   Loader,
+  Lock,
+  X,
 } from "lucide-react";
 import { buildWebsiteUrl } from "../../lib/website-detector";
 import { initializeWebsiteContent } from "../../lib/initialize-website-content";
@@ -27,6 +29,7 @@ interface Website {
   subdomain: string;
   status: string;
   createdat: string;
+  password?: string;
 }
 import { DEFAULT_THEMES } from "../../lib/themes";
 import { PLANS, ServicePlan } from "../../lib/plans";
@@ -62,6 +65,22 @@ export const WebsiteList: React.FC = () => {
     subdomain: "",
     selectedTheme: "warm-bakery",
     selectedPlan: "basic", // Default plan
+    password: "", // Edit password
+  });
+
+  // Password modal state
+  const [passwordModal, setPasswordModal] = useState<{
+    isOpen: boolean;
+    websiteId: string;
+    websiteTitle: string;
+    inputPassword: string;
+    error: string;
+  }>({
+    isOpen: false,
+    websiteId: "",
+    websiteTitle: "",
+    inputPassword: "",
+    error: "",
   });
 
   // Default enabled sections based on Basic Plan
@@ -101,7 +120,7 @@ export const WebsiteList: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from("websites")
-        .select("id, title, subdomain, status, createdat")
+        .select("id, title, subdomain, status, createdat, password")
         .order("createdat", { ascending: false });
 
       if (error) throw error;
@@ -112,6 +131,7 @@ export const WebsiteList: React.FC = () => {
           subdomain: w.subdomain,
           status: w.status || "draft",
           createdat: w.createdat || new Date().toISOString(),
+          password: w.password || "",
         })),
       );
     } catch (error) {
@@ -142,6 +162,7 @@ export const WebsiteList: React.FC = () => {
         title: newWebsite.title,
         subdomain: newWebsite.subdomain,
         status: "draft",
+        password: newWebsite.password, // Store edit password
         theme: {
           preset: newWebsite.selectedTheme,
           colors: theme.colors,
@@ -176,6 +197,7 @@ export const WebsiteList: React.FC = () => {
         subdomain: "",
         selectedTheme: "warm-bakery",
         selectedPlan: "basic",
+        password: "",
       });
       setEnabledSections(new Set(PLANS.find(p => p.id === "basic")?.sections || []));
       loadWebsites();
@@ -303,6 +325,29 @@ export const WebsiteList: React.FC = () => {
                   <span className="text-sm text-gray-500">.{domain}</span>
                 </div>
               </div>
+            </div>
+
+            {/* Edit Password */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Edit Password
+              </label>
+              <div className="flex items-center gap-2">
+                <Lock size={18} className="text-gray-400" />
+                <input
+                  type="password"
+                  value={newWebsite.password}
+                  onChange={(e) =>
+                    setNewWebsite({ ...newWebsite, password: e.target.value })
+                  }
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900"
+                  placeholder="Enter password to protect editing"
+                  required
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                This password will be required to edit the website
+              </p>
             </div>
 
             {/* Theme Selection */}
@@ -464,13 +509,21 @@ export const WebsiteList: React.FC = () => {
                   <ExternalLink size={16} />
                   View
                 </a>
-                <Link
-                  to={`/admin/websites/${website.id}`}
+                <button
+                  onClick={() => {
+                    setPasswordModal({
+                      isOpen: true,
+                      websiteId: website.id,
+                      websiteTitle: website.title,
+                      inputPassword: "",
+                      error: "",
+                    });
+                  }}
                   className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition"
                 >
                   <Edit size={16} />
                   Edit
-                </Link>
+                </button>
                 <Link
                   to={`/admin/websites/${website.id}/content`}
                   className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition"
@@ -519,6 +572,98 @@ export const WebsiteList: React.FC = () => {
             <Plus size={20} />
             Create Website
           </Link>
+        </div>
+      )}
+
+      {/* Password Modal */}
+      {passwordModal.isOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <Lock size={20} />
+                Enter Password
+              </h3>
+              <button
+                onClick={() =>
+                  setPasswordModal({
+                    isOpen: false,
+                    websiteId: "",
+                    websiteTitle: "",
+                    inputPassword: "",
+                    error: "",
+                  })
+                }
+                className="p-1 hover:bg-gray-100 rounded-lg transition"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-4">
+              Enter the password to edit <strong>{passwordModal.websiteTitle}</strong>
+            </p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const website = websites.find((w) => w.id === passwordModal.websiteId);
+                if (website && website.password === passwordModal.inputPassword) {
+                  // Password correct - store auth and navigate to edit page
+                  sessionStorage.setItem(`website_auth_${passwordModal.websiteId}`, "true");
+                  window.location.href = `/admin/websites/${passwordModal.websiteId}`;
+                } else {
+                  setPasswordModal((prev) => ({
+                    ...prev,
+                    error: "Incorrect password. Please try again.",
+                  }));
+                }
+              }}
+            >
+              <input
+                type="password"
+                value={passwordModal.inputPassword}
+                onChange={(e) =>
+                  setPasswordModal((prev) => ({
+                    ...prev,
+                    inputPassword: e.target.value,
+                    error: "",
+                  }))
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent mb-2"
+                placeholder="Enter password"
+                autoFocus
+              />
+
+              {passwordModal.error && (
+                <p className="text-sm text-red-600 mb-3">{passwordModal.error}</p>
+              )}
+
+              <div className="flex gap-3 mt-4">
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition font-medium"
+                >
+                  Unlock & Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPasswordModal({
+                      isOpen: false,
+                      websiteId: "",
+                      websiteTitle: "",
+                      inputPassword: "",
+                      error: "",
+                    })
+                  }
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
