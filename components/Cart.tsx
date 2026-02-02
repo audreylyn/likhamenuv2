@@ -73,6 +73,9 @@ export const Cart: React.FC<CartProps> = ({
 
     // Save order to Google Spreadsheet
     const orderTrackingUrl = import.meta.env.VITE_ORDER_TRACKING_URL;
+    console.log('Order Tracking URL:', orderTrackingUrl);
+    console.log('Website Data:', websiteData?.id, websiteData?.title);
+    
     if (orderTrackingUrl && websiteData) {
       try {
         const orderPayload = {
@@ -96,6 +99,8 @@ export const Cart: React.FC<CartProps> = ({
           }
         };
 
+        console.log('Sending order payload:', orderPayload);
+
         await fetch(orderTrackingUrl, {
           method: 'POST',
           mode: 'no-cors', // Google Apps Script requires no-cors
@@ -104,11 +109,13 @@ export const Cart: React.FC<CartProps> = ({
           },
           body: JSON.stringify(orderPayload)
         });
-        console.log('Order saved to spreadsheet');
+        console.log('Order request sent to spreadsheet');
       } catch (error) {
         console.error('Failed to save order to spreadsheet:', error);
         // Continue with checkout even if tracking fails
       }
+    } else {
+      console.warn('Order tracking skipped - URL or websiteData missing');
     }
 
     // Construct message for messenger
