@@ -14,7 +14,6 @@ import React, {
 import { useWebsite } from "./WebsiteContext";
 
 import { supabase } from "../lib/supabase";
-import { detectWebsiteId } from "../lib/website-detector";
 
 interface EditorContextType {
   isEditing: boolean;
@@ -38,7 +37,7 @@ export const EditorProvider: React.FC<{
 }> = ({ children, isEditing: initialEditing }) => {
   const [isEditing, setIsEditing] = useState(initialEditing);
   const [hasChanges, setHasChanges] = useState(false);
-  const { refreshContent } = useWebsite();
+  const { refreshContent, currentWebsite } = useWebsite();
 
   // ... refs ...
 
@@ -53,7 +52,8 @@ export const EditorProvider: React.FC<{
       recordId?: string,
     ): Promise<void> => {
       try {
-        const websiteId = await detectWebsiteId();
+        // Use website ID from context instead of detecting again
+        const websiteId = currentWebsite;
         if (!websiteId) {
           throw new Error(
             "No website ID found. Make sure you are accessing the site with ?site=subdomain parameter or correct subdomain.",
@@ -107,7 +107,7 @@ export const EditorProvider: React.FC<{
         throw error;
       }
     },
-    [refreshContent],
+    [refreshContent, currentWebsite],
   );
 
   /**
@@ -116,7 +116,8 @@ export const EditorProvider: React.FC<{
   const saveSectionContent = useCallback(
     async (section: string, content: any): Promise<void> => {
       try {
-        const websiteId = await detectWebsiteId();
+        // Use website ID from context instead of detecting again
+        const websiteId = currentWebsite;
         if (!websiteId) {
           throw new Error("No website ID found.");
         }
@@ -162,7 +163,7 @@ export const EditorProvider: React.FC<{
         throw error;
       }
     },
-    [refreshContent],
+    [refreshContent, currentWebsite],
   );
 
   const value: EditorContextType = {
