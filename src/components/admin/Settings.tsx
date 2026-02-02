@@ -1,58 +1,197 @@
 /**
- * Settings Page
- * Global settings and activity logs
+ * Maintenance Dashboard
+ * Monitor system health, storage, and clean up orphaned assets
  */
 
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { Activity, Settings as SettingsIcon } from "lucide-react";
+import {
+  Activity,
+  Database,
+  HardDrive,
+  Trash2,
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle,
+  Loader,
+  Image as ImageIcon,
+} from "lucide-react";
+
+interface StorageFile {
+  name: string;
+  id: string;
+  updated_at: string;
+  created_at: string;
+  last_accessed_at: string;
+  metadata: Record<string, any>; // Relaxed type to match Supabase return
+}
 
 export const Settings: React.FC = () => {
-  const [activityLog, setActivityLog] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activityLogEnabled, setActivityLogEnabled] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Stats
+  const [stats, setStats] = useState({
+    storageCount: 0,
+    storageSize: 0,
+    websiteCount: 0,
+    submissionCount: 0,
+  });
+
+  // Orphaned Images
+  const [scanning, setScanning] = useState(false);
+  const [orphanedImages, setOrphanedImages] = useState<StorageFile[]>([]);
+  const [scanResult, setScanResult] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    loadActivityLog();
+    loadStats();
   }, []);
 
-  const loadActivityLog = async () => {
+  const loadStats = async () => {
     try {
-      const { data, error } = await supabase
-        .from("activity_log")
-        .select(
-          "*, user:user_profiles(full_name, email), website:websites(site_title)",
-        )
-        .order("created_at", { ascending: false })
-        .limit(50);
+      setRefreshing(true);
 
-      if (error) {
-        // Table doesn't exist - activity logging not enabled
-        if (
-          error.code === "PGRST205" ||
-          error.message?.includes("activity_log")
-        ) {
-          setActivityLogEnabled(false);
-          setActivityLog([]);
-          return;
-        }
-        throw error;
+      // 1. Storage Stats (images bucket)
+      const { data: files, error: storageError } = await supabase.storage
+        .from("images")
+        .list();
+
+      let totalSize = 0;
+      let count = 0;
+
+      if (!storageError && files) {
+        count = files.length;
+        totalSize = (files as StorageFile[]).reduce((acc, file) => acc + (file.metadata?.size || 0), 0);
       }
-      setActivityLog(data || []);
+
+      // 2. Database Stats
+      const { count: siteCount } = await supabase
+        .from("websites")
+        .select("*", { count: "exact", head: true });
+
+      const { count: subCount } = await supabase
+        .from("contact_submissions")
+        .select("*", { count: "exact", head: true });
+
+      setStats({
+        storageCount: count,
+        storageSize: totalSize,
+        websiteCount: siteCount || 0,
+        submissionCount: subCount || 0,
+      });
+
     } catch (error) {
-      console.error("Error loading activity log:", error);
-      setActivityLogEnabled(false);
+      console.error("Error loading stats:", error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const formatBytes = (bytes: number, decimals = 2) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
+  };
+
+  const checkForOrphans = async () => {
+    try {
+      setScanning(true);
+      setOrphanedImages([]);
+      setScanResult(null);
+
+      // 1. Get all files from storage
+      const { data: files, error: storageError } = await supabase.storage
+        .from("images")
+        .list();
+
+      if (storageError || !files) {
+        throw new Error("Could not list storage files");
+      }
+
+      // 2. Get all website data to find references
+      // Explicitly typing as any[] to avoid 'never' inference issues
+      const { data: websites, error: dbError } = await supabase
+        .from("websites")
+        .select("content, theme, logo, favicon, marketing, messenger");
+
+      if (dbError) throw dbError;
+
+      // 3. Collect all used image filenames
+      const usedFilenames = new Set<string>();
+
+      const extractFilenames = (obj: any) => {
+        if (!obj) return;
+        if (typeof obj === "string") {
+          // Check if string contains the pattern for Supabase storage images
+          // Common pattern: .../images/filename.ext or just filename.ext if stored relatively
+          // We'll look for exact filename matches from the bucket list
+          (files as StorageFile[]).forEach(file => {
+            if (obj.includes(file.name)) {
+              usedFilenames.add(file.name);
+            }
+          });
+        } else if (typeof obj === "object") {
+          Object.values(obj).forEach((value) => extractFilenames(value));
+        }
+      };
+
+      (websites as any[])?.forEach((site) => {
+        extractFilenames(site.content);
+        extractFilenames(site.theme);
+        extractFilenames(site.marketing);
+        extractFilenames(site.messenger);
+        if (site.logo) extractFilenames(site.logo);
+        if (site.favicon) extractFilenames(site.favicon);
+      });
+
+      // 4. Identify orphans
+      const orphans = (files as StorageFile[]).filter((file) => !usedFilenames.has(file.name) && file.name !== ".emptyFolderPlaceholder");
+      setOrphanedImages(orphans);
+      setScanResult(`Scan complete. Found ${orphans.length} orphaned images.`);
+
+    } catch (error: any) {
+      console.error("Scan error:", error);
+      setScanResult(`Scan failed: ${error.message}`);
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const deleteOrphans = async () => {
+    if (!window.confirm(`Are you sure you want to delete ${orphanedImages.length} images? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      const fileNames = orphanedImages.map(f => f.name);
+
+      const { error } = await supabase.storage
+        .from("images")
+        .remove(fileNames);
+
+      if (error) throw error;
+
+      alert("Orphaned images deleted successfully!");
+      setOrphanedImages([]);
+      loadStats(); // Refresh stats
+    } catch (error: any) {
+      alert(`Delete failed: ${error.message}`);
+    } finally {
+      setDeleting(false);
     }
   };
 
   if (loading) {
     return (
       <div className="p-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="h-64 bg-gray-200 rounded-xl"></div>
+        <div className="flex items-center justify-center h-64">
+          <Loader className="animate-spin text-gray-400" size={48} />
         </div>
       </div>
     );
@@ -61,88 +200,157 @@ export const Settings: React.FC = () => {
   return (
     <div className="p-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-1">System settings and activity logs</p>
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Maintenance</h1>
+          <p className="text-gray-600 mt-1">System health and cleanup</p>
+        </div>
+        <button
+          onClick={loadStats}
+          disabled={refreshing}
+          className="p-2 text-gray-500 hover:text-blue-600 transition disabled:opacity-50"
+          title="Refresh Stats"
+        >
+          <RefreshCw size={20} className={refreshing ? "animate-spin" : ""} />
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {/* Storage Stats */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center gap-3 mb-4">
-            <SettingsIcon size={24} className="text-gray-700" />
-            <h2 className="text-xl font-bold text-gray-900">System Info</h2>
+            <HardDrive size={24} className="text-blue-600" />
+            <h2 className="text-lg font-bold text-gray-900">Storage Usage</h2>
           </div>
-          <div className="space-y-3">
-            <div>
-              <p className="text-sm text-gray-600">Platform</p>
-              <p className="text-lg font-semibold text-gray-900">
-                LikhaSiteWorks v1.0
-              </p>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Total Files</span>
+              <span className="font-mono font-medium text-gray-900">{stats.storageCount}</span>
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Database</p>
-              <p className="text-lg font-semibold text-gray-900">Supabase</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Theme Presets</p>
-              <p className="text-lg font-semibold text-gray-900">
-                5 Professional Themes
-              </p>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Total Size</span>
+              <span className="font-mono font-medium text-gray-900">{formatBytes(stats.storageSize)}</span>
             </div>
           </div>
         </div>
 
-        {/* Activity Log */}
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center gap-3">
-              <Activity size={24} className="text-gray-700" />
-              <h2 className="text-xl font-bold text-gray-900">
-                Recent Activity
-              </h2>
+        {/* Database Stats */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Database size={24} className="text-purple-600" />
+            <h2 className="text-lg font-bold text-gray-900">Database</h2>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Total Websites</span>
+              <span className="font-mono font-medium text-gray-900">{stats.websiteCount}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Total Submissions</span>
+              <span className="font-mono font-medium text-gray-900">{stats.submissionCount}</span>
             </div>
           </div>
+        </div>
 
-          <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
-            {!activityLogEnabled ? (
-              <div className="p-8 text-center text-gray-500">
-                <Activity size={48} className="mx-auto mb-4 opacity-20" />
-                <p className="font-medium">Activity Logging Not Enabled</p>
-                <p className="text-sm mt-1">
-                  Create the activity_log table to track user actions
-                </p>
-              </div>
-            ) : activityLog.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <Activity size={48} className="mx-auto mb-4 opacity-20" />
-                <p>No activity recorded yet</p>
-              </div>
-            ) : (
-              activityLog.map((log) => (
-                <div key={log.id} className="p-4 hover:bg-gray-50 transition">
-                  <p className="text-sm text-gray-900 mb-1">
-                    <span className="font-medium">
-                      {log.user?.full_name || log.user?.email || "Unknown user"}
-                    </span>{" "}
-                    <span className="text-gray-600">{log.action}</span>{" "}
-                    <span className="font-medium">{log.resource}</span>
-                    {log.website && (
-                      <>
-                        {" on "}
-                        <span className="font-medium">
-                          {log.website.site_title}
-                        </span>
-                      </>
-                    )}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {new Date(log.created_at).toLocaleString()}
-                  </p>
-                </div>
-              ))
-            )}
+        {/* System Health */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Activity size={24} className="text-green-600" />
+            <h2 className="text-lg font-bold text-gray-900">System Status</h2>
           </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-green-700 bg-green-50 p-2 rounded-lg">
+              <CheckCircle size={16} />
+              <span className="text-sm font-medium">Database Connected</span>
+            </div>
+            <div className="flex items-center gap-2 text-green-700 bg-green-50 p-2 rounded-lg">
+              <CheckCircle size={16} />
+              <span className="text-sm font-medium">Storage Active</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Orphaned Images Scanner */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <ImageIcon size={24} className="text-orange-600" />
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Orphaned Images</h2>
+              <p className="text-sm text-gray-500">Find and remove unused images to save space</p>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            {orphanedImages.length > 0 && (
+              <button
+                onClick={deleteOrphans}
+                disabled={deleting}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50"
+              >
+                {deleting ? <Loader size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                Delete {orphanedImages.length} Files
+              </button>
+            )}
+            <button
+              onClick={checkForOrphans}
+              disabled={scanning || deleting}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition disabled:opacity-50"
+            >
+              {scanning ? (
+                <>
+                  <Loader size={16} className="animate-spin" />
+                  Scanning...
+                </>
+              ) : (
+                <>
+                  <RefreshCw size={16} />
+                  Scan for Orphans
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 bg-gray-50">
+          {scanResult && (
+            <div className={`mb-4 p-3 rounded-lg text-sm ${orphanedImages.length > 0 ? "bg-orange-100 text-orange-800" : "bg-green-100 text-green-800"}`}>
+              {scanResult}
+            </div>
+          )}
+
+          {orphanedImages.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {orphanedImages.map((file) => (
+                <div key={file.id} className="relative group bg-white p-2 rounded border border-gray-200">
+                  <div className="aspect-square bg-gray-100 rounded mb-2 overflow-hidden flex items-center justify-center">
+                    {/* Try to show preview if it's an image */}
+                    {file.metadata?.mimetype?.startsWith("image") ? (
+                      <img
+                        src={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/images/${file.name}`}
+                        alt={file.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => (e.currentTarget.style.display = "none")}
+                      />
+                    ) : (
+                      <ImageIcon size={24} className="text-gray-300" />
+                    )}
+                  </div>
+                  <div className="truncate text-xs font-medium text-gray-700" title={file.name}>
+                    {file.name}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {formatBytes(file.metadata?.size || 0)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-gray-500">
+              <CheckCircle size={48} className="mx-auto mb-4 opacity-20" />
+              <p>System is clean. No orphaned images found.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

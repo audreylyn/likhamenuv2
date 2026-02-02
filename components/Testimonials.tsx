@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Quote, ChevronLeft, ChevronRight, X, Plus, Image as ImageIcon } from 'lucide-react';
+import { Star, Quote, ChevronLeft, ChevronRight, X, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Testimonial, TestimonialsConfig } from '../src/types/database.types';
 import { EditableText } from '../src/components/editor/EditableText';
+import { EditableImage } from '../src/components/editor/EditableImage';
 import { useEditor } from '../src/contexts/EditorContext';
 import { useWebsite } from '../src/contexts/WebsiteContext';
 
@@ -75,22 +76,6 @@ export const Testimonials: React.FC = () => {
         console.error('Error deleting testimonial:', error);
         alert('Failed to delete testimonial. Please try again.');
       }
-    }
-  };
-
-  const handleImageChange = async (testimonialId: string, currentImageUrl: string | null) => {
-    const newImageUrl = prompt('Enter image URL:', currentImageUrl || '');
-    if (newImageUrl === null) return; // User cancelled
-
-    try {
-      const newTestimonials = testimonials.map(t =>
-        t.id === testimonialId ? { ...t, customer_image_url: newImageUrl } : t
-      );
-      await saveField('testimonials', 'items', newTestimonials);
-      setTestimonials(newTestimonials);
-    } catch (error) {
-      console.error('Error updating image:', error);
-      alert('Failed to save image. Please try again.');
     }
   };
 
@@ -235,22 +220,19 @@ export const Testimonials: React.FC = () => {
                     )}
 
                     <div className="flex items-center gap-4 mt-auto">
-                      <div className="relative">
-                        <img
-                          src={testimonial.customer_image_url || `https://i.pravatar.cc/150?u=${testimonial.id}`}
-                          alt={testimonial.customer_name}
-                          className="w-12 h-12 rounded-full object-cover border-2 border-bakery-primary"
-                        />
-                        {isEditing && (
-                          <button
-                            onClick={() => handleImageChange(testimonial.id, testimonial.customer_image_url || null)}
-                            className="absolute -bottom-1 -left-1 z-10 bg-white text-bakery-dark rounded-full p-1.5 hover:bg-bakery-cream transition-colors shadow-lg border-2 border-bakery-primary"
-                            title="Change customer image"
-                          >
-                            <ImageIcon size={12} />
-                          </button>
-                        )}
-                      </div>
+                      <EditableImage
+                        src={testimonial.customer_image_url || `https://i.pravatar.cc/150?u=${testimonial.id}`}
+                        alt={testimonial.customer_name}
+                        onSave={async (newUrl) => {
+                          const newTestimonials = testimonials.map(t =>
+                            t.id === testimonial.id ? { ...t, customer_image_url: newUrl } : t
+                          );
+                          await saveField('testimonials', 'items', newTestimonials);
+                          setTestimonials(newTestimonials);
+                        }}
+                        className="w-12 h-12 rounded-full object-cover border-2 border-bakery-primary"
+                        aspectRatio="square"
+                      />
                       <div>
                         {isEditing ? (
                           <EditableText
