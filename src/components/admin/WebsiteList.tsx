@@ -165,7 +165,7 @@ export const WebsiteList: React.FC = () => {
         id: id,
         title: newWebsite.title,
         subdomain: newWebsite.subdomain,
-        status: "draft",
+        status: "published",
         password: newWebsite.password, // Store edit password
         theme: {
           preset: newWebsite.selectedTheme,
@@ -612,7 +612,7 @@ export const WebsiteList: React.FC = () => {
                 <X size={20} />
               </button>
             </div>
-            
+
             <p className="text-sm text-gray-600 mb-4">
               Enter the password to edit <strong>{passwordModal.websiteTitle}</strong>
             </p>

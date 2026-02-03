@@ -130,6 +130,33 @@ export const PublicSite: React.FC = () => {
     );
   }
 
+  // Check for suspended/draft status on public domains
+  // This prevents accessing non-published sites via subdomain
+  if (!loading && websiteData) {
+    const params = new URLSearchParams(window.location.search);
+    const siteParam = params.get("site") || params.get("website");
+
+    // If accessing via public subdomain (no query param) and status is not published
+    // We allow access if separate "site" param is present (e.g. for editor/preview)
+    if (!siteParam && websiteData.status !== "published") {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center max-w-md p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Website Unavailable
+            </h2>
+            <p className="text-gray-600 mb-4">
+              This website is currently {websiteData.status}.
+            </p>
+            <p className="text-sm text-gray-500">
+              Please contact the website administrator for more information.
+            </p>
+          </div>
+        </div>
+      );
+    }
+  }
+
   // Show error if website not found or inactive
   if (!loading && !currentWebsite) {
     const params =
