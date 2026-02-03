@@ -78,7 +78,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   // Show minimal navbar while loading
   if (loading) {
     return (
-      <nav className="fixed w-full z-30 bg-transparent py-6">
+      <nav className="fixed w-full z-50 bg-transparent py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex-shrink-0 flex items-center gap-2">
@@ -94,11 +94,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <nav
-      className={`fixed w-full z-30 transition-all duration-300 ${
-        scrolled
-          ? "bg-white/95 backdrop-blur-sm shadow-md py-2"
-          : "bg-transparent py-6"
-      }`}
+      className={`fixed w-full z-50 transition-all duration-300 ${scrolled
+        ? "bg-white/95 backdrop-blur-sm shadow-md py-2"
+        : "bg-transparent py-6"
+        }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
@@ -132,15 +131,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                   setLocalContent({ ...localContent, brand_name: newValue });
                 }}
                 tag="span"
-                className={`font-serif text-2xl font-bold tracking-wide transition-colors duration-300 ${
-                  scrolled ? "text-bakery-dark" : "text-white drop-shadow-md"
-                }`}
+                className={`font-serif text-2xl font-bold tracking-wide transition-colors duration-300 ${scrolled ? "text-bakery-dark" : "text-white drop-shadow-md"
+                  }`}
               />
             ) : (
               <span
-                className={`font-serif text-2xl font-bold tracking-wide transition-colors duration-300 ${
-                  scrolled ? "text-bakery-dark" : "text-white drop-shadow-md"
-                }`}
+                className={`font-serif text-2xl font-bold tracking-wide transition-colors duration-300 ${scrolled ? "text-bakery-dark" : "text-white drop-shadow-md"
+                  }`}
               >
                 {brandName}
               </span>
@@ -158,11 +155,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   key={index}
                   href={isEditing ? "#" : linkHref}
                   onClick={isEditing ? (e) => e.preventDefault() : undefined}
-                  className={`font-sans font-medium text-lg tracking-wide transition-colors duration-300 ${
-                    scrolled
-                      ? "text-bakery-dark hover:text-bakery-primary"
-                      : "text-white/90 hover:text-white drop-shadow-sm"
-                  }`}
+                  className={`font-sans font-medium text-lg tracking-wide transition-colors duration-300 ${scrolled
+                    ? "text-bakery-dark hover:text-bakery-primary"
+                    : "text-white/90 hover:text-white drop-shadow-sm"
+                    }`}
                 >
                   {isEditing ? (
                     <EditableText
@@ -191,11 +187,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Cart Button */}
             <button
               onClick={onOpenCart}
-              className={`flex items-center gap-2 px-5 py-2 rounded-full font-serif transition-all duration-300 shadow-lg group relative ${
-                scrolled
-                  ? "bg-bakery-dark text-white hover:bg-bakery-primary"
-                  : "bg-white text-bakery-dark hover:bg-bakery-sand"
-              }`}
+              className={`flex items-center gap-2 px-5 py-2 rounded-full font-serif transition-all duration-300 shadow-lg group relative ${scrolled
+                ? "bg-bakery-dark text-white hover:bg-bakery-primary"
+                : "bg-white text-bakery-dark hover:bg-bakery-sand"
+                }`}
             >
               <ShoppingCart size={20} />
               <span className="font-bold">Cart</span>
@@ -211,11 +206,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="md:hidden flex items-center gap-4">
             <button
               onClick={onOpenCart}
-              className={`relative p-2 rounded-full transition-colors ${
-                scrolled
-                  ? "bg-bakery-dark text-white"
-                  : "bg-white text-bakery-dark"
-              }`}
+              className={`relative p-2 rounded-full transition-colors ${scrolled
+                ? "bg-bakery-dark text-white"
+                : "bg-white text-bakery-dark"
+                }`}
             >
               <ShoppingCart size={24} />
               {cartItemCount > 0 && (
@@ -227,11 +221,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className={`focus:outline-none transition-colors duration-300 ${
-                scrolled
-                  ? "text-bakery-dark hover:text-bakery-primary"
-                  : "text-white hover:text-bakery-sand"
-              }`}
+              className={`focus:outline-none transition-colors duration-300 ${scrolled
+                ? "text-bakery-dark hover:text-bakery-primary"
+                : "text-white hover:text-bakery-sand"
+                }`}
             >
               {isOpen ? <X size={28} /> : <Menu size={28} />}
             </button>
