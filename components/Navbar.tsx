@@ -57,17 +57,68 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleLogoChange = async () => {
-    const logoUrl = prompt(
-      "Enter logo image URL:",
-      localContent.brand_logo_url || "",
-    );
-    if (logoUrl !== null) {
-      try {
-        await saveField("navbar", "brand_logo_url", logoUrl || null);
-        setLocalContent({ ...localContent, brand_logo_url: logoUrl || null });
-      } catch (error) {
-        console.error("Error saving logo:", error);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const logoFileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleLogoClick = () => {
+    if (isEditing && logoFileInputRef.current) {
+      logoFileInputRef.current.click();
+    }
+  };
+
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 2MB for logos)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Logo must be less than 2MB');
+      return;
+    }
+
+    setIsUploadingLogo(true);
+
+    try {
+      const { supabase } = await import('../src/lib/supabase');
+      
+      // Generate unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `logo-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+
+      // Upload to Supabase Storage
+      const { data, error: uploadError } = await supabase.storage
+        .from('images')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('images')
+        .getPublicUrl(data.path);
+
+      // Save the new URL
+      await saveField("navbar", "brand_logo_url", urlData.publicUrl);
+      setLocalContent({ ...localContent, brand_logo_url: urlData.publicUrl });
+    } catch (error: any) {
+      console.error("Error uploading logo:", error);
+      alert('Failed to upload logo: ' + (error.message || 'Unknown error'));
+    } finally {
+      setIsUploadingLogo(false);
+      // Reset file input
+      if (logoFileInputRef.current) {
+        logoFileInputRef.current.value = '';
       }
     }
   };
@@ -106,10 +157,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex-shrink-0 flex items-center gap-2 cursor-pointer group">
             <div
               className={`p-2 rounded-full transition-colors duration-300 relative ${scrolled ? "bg-bakery-primary text-white" : "bg-white text-bakery-primary"} ${isEditing ? "cursor-pointer hover:ring-2 hover:ring-blue-500 rounded-full" : ""}`}
-              onClick={isEditing ? handleLogoChange : undefined}
-              title={isEditing ? "Click to change logo" : ""}
+              onClick={handleLogoClick}
+              title={isEditing ? "Click to upload logo" : ""}
             >
-              {brandLogo ? (
+              {isUploadingLogo ? (
+                <div className="animate-spin">
+                  <Upload size={24} />
+                </div>
+              ) : brandLogo ? (
                 <img
                   src={brandLogo}
                   alt="Logo"
@@ -118,12 +173,22 @@ export const Navbar: React.FC<NavbarProps> = ({
               ) : (
                 <Croissant size={24} />
               )}
-              {isEditing && (
+              {isEditing && !isUploadingLogo && (
                 <div className="absolute -top-1 -right-1 bg-blue-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Upload size={12} />
                 </div>
               )}
             </div>
+            {/* Hidden file input */}
+            {isEditing && (
+              <input
+                ref={logoFileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleLogoChange}
+                className="hidden"
+              />
+            )}
             {isEditing ? (
               <EditableText
                 value={brandName}

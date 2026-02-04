@@ -93,6 +93,15 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({
 
           {/* Right: Actions and User Info */}
           <div className="flex items-center gap-3">
+            {/* AI Content Generator Button */}
+            <button
+              onClick={() => setShowContentGenerator(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition shadow-md font-medium"
+              title="Generate content with AI"
+            >
+              <Sparkles size={18} />
+              <span className="hidden sm:inline">AI Content</span>
+            </button>
             {/* User Info */}
             <div className="text-right">
               <p className="text-sm font-medium text-gray-900">{user?.full_name || user?.email}</p>
