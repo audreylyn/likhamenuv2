@@ -376,6 +376,32 @@ export const DEFAULT_WEBSITE_CONTENT = {
     position: "bottom-right",
     agent_name: "Support Agent",
   },
+  payment: {
+    id: "1",
+    heading: "Payment Options",
+    subheading: "SECURE PAYMENT",
+    description: "Choose your preferred payment method below. After payment, please send your proof of payment to our contact number.",
+    gcash: {
+      enabled: true,
+      qr_code_url: "",
+      account_name: "Your Business Name",
+      account_number: "0917 XXX XXXX"
+    },
+    bank_transfer: {
+      enabled: true,
+      bank_name: "BDO / BPI",
+      account_name: "Your Business Name",
+      account_number: "1234 5678 9012",
+      additional_info: ""
+    },
+    maya: {
+      enabled: false,
+      qr_code_url: "",
+      account_name: "Your Business Name",
+      account_number: "0917 XXX XXXX"
+    },
+    instructions: "After payment, kindly send a screenshot of your receipt via Viber/SMS to confirm your order."
+  },
 };
 
 /**

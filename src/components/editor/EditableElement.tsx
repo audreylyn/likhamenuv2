@@ -5,7 +5,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useEditor } from '../../contexts/EditorContext';
-import { Pencil } from 'lucide-react';
 
 interface EditableElementProps {
   children: React.ReactNode;
@@ -148,12 +147,6 @@ export const EditableElement: React.FC<EditableElementProps> = ({
       onClick={handleClick}
     >
       {children}
-      {isEditing && (
-        <Pencil 
-          size={14} 
-          className="inline-block ml-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" 
-        />
-      )}
     </Tag>
   );
 };

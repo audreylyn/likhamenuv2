@@ -20,6 +20,7 @@ import { Cart } from "../../components/Cart";
 import { Reservation } from "../../components/Reservation";
 import { FAQ } from "../../components/FAQ";
 import { ChatSupport } from "../../components/ChatSupport";
+import { Payment } from "../../components/Payment";
 import { CartItem, MenuItem } from "../types";
 import { ConditionalSection } from "../components/ConditionalSection";
 import { useWebsite } from "../contexts/WebsiteContext";
@@ -286,6 +287,9 @@ export const PublicSite: React.FC = () => {
         </ConditionalSection>
         <ConditionalSection section="faq">
           <FAQ />
+        </ConditionalSection>
+        <ConditionalSection section="payment">
+          <Payment />
         </ConditionalSection>
         <ConditionalSection section="contact">
           <Contact />

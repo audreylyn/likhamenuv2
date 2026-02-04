@@ -79,10 +79,8 @@ export const WebsiteEditor: React.FC = () => {
       // Store password for verification
       setStoredPassword(websiteData.password || null);
 
-      // If no password set, allow access
-      if (!websiteData.password) {
-        setIsAuthenticated(true);
-      }
+      // Auto-authenticate for admin users (no password prompt in admin panel)
+      setIsAuthenticated(true);
 
       // Check if content is empty (no sections initialized)
       const content = websiteData.content || {};

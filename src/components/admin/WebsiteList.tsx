@@ -522,23 +522,15 @@ export const WebsiteList: React.FC = () => {
                   <ExternalLink size={16} />
                   View
                 </a>
-                <button
-                  onClick={() => {
-                    setPasswordModal({
-                      isOpen: true,
-                      websiteId: website.id,
-                      websiteTitle: website.title,
-                      inputPassword: "",
-                      error: "",
-                    });
-                  }}
+                <a
+                  href={`/edit?site=${website.subdomain}`}
                   className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition"
                 >
                   <Edit size={16} />
                   Edit
-                </button>
+                </a>
                 <Link
-                  to={`/admin/websites/${website.id}/content`}
+                  to={`/admin/websites/${website.id}`}
                   className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition"
                 >
                   <Sparkles size={16} />
@@ -622,8 +614,8 @@ export const WebsiteList: React.FC = () => {
                 e.preventDefault();
                 const website = websites.find((w) => w.id === passwordModal.websiteId);
                 if (website && website.password === passwordModal.inputPassword) {
-                  // Password correct - navigate to edit page (no storage)
-                  window.location.href = `/admin/websites/${passwordModal.websiteId}`;
+                  // Password correct - navigate to edit page with subdomain
+                  window.location.href = `/edit?site=${website.subdomain}`;
                 } else {
                   setPasswordModal((prev) => ({
                     ...prev,

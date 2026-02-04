@@ -5,7 +5,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useEditor } from '../../contexts/EditorContext';
-import { Pencil } from 'lucide-react';
 
 interface EditableTextProps {
   value: string;
@@ -128,11 +127,7 @@ export const EditableText: React.FC<EditableTextProps> = ({
       className: `${className} ${isEditing ? 'cursor-text hover:outline hover:outline-2 hover:outline-blue-500 hover:outline-dashed rounded px-1 transition-all group relative' : ''}`,
       onClick: handleClick,
     },
-    value || React.createElement('span', { className: 'text-gray-400 italic' }, placeholder),
-    isEditing && React.createElement(Pencil, {
-      size: 14,
-      className: 'inline-block ml-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity',
-    })
+    value || React.createElement('span', { className: 'text-gray-400 italic' }, placeholder)
   );
 };
 

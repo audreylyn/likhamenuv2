@@ -23,6 +23,7 @@ const ALL_SECTIONS = [
   "testimonials",
   "specialOffers",
   "faq",
+  "payment",
   "contact",
   "instagramFeed",
   "footer",

@@ -47,6 +47,11 @@ const SECTION_DEFINITIONS = [
     description: "Frequently asked questions",
   },
   {
+    name: "payment",
+    label: "Payment Options",
+    description: "GCash QR code & bank details",
+  },
+  {
     name: "contact",
     label: "Contact Section",
     description: "Contact information",

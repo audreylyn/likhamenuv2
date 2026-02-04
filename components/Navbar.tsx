@@ -14,7 +14,8 @@ const DEFAULT_NAVBAR = {
     { label: "Home", href: "#hero", order: 0 },
     { label: "Menu", href: "#menu", order: 1 },
     { label: "About", href: "#about", order: 2 },
-    { label: "Contact", href: "#contact", order: 3 },
+    { label: "Payment", href: "#payment", order: 3 },
+    { label: "Contact", href: "#contact", order: 4 },
   ],
   cta_button: {
     text: "Reserve Table",
