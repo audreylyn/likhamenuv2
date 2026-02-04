@@ -220,20 +220,23 @@ export const Testimonials: React.FC = () => {
                     )}
 
                     <div className="flex items-center gap-4 mt-auto">
-                      <EditableImage
-                        src={testimonial.customer_image_url || `https://i.pravatar.cc/150?u=${testimonial.id}`}
-                        alt={testimonial.customer_name}
-                        onSave={async (newUrl) => {
-                          const newTestimonials = testimonials.map(t =>
-                            t.id === testimonial.id ? { ...t, customer_image_url: newUrl } : t
-                          );
-                          await saveField('testimonials', 'items', newTestimonials);
-                          setTestimonials(newTestimonials);
-                        }}
-                        className="w-12 h-12 rounded-full object-cover border-2 border-bakery-primary"
-                        aspectRatio="square"
-                      />
-                      <div>
+                      <div className="relative flex-shrink-0">
+                        <EditableImage
+                          src={testimonial.customer_image_url || `https://i.pravatar.cc/150?u=${testimonial.id}`}
+                          alt={testimonial.customer_name}
+                          onSave={async (newUrl) => {
+                            const newTestimonials = testimonials.map(t =>
+                              t.id === testimonial.id ? { ...t, customer_image_url: newUrl } : t
+                            );
+                            await saveField('testimonials', 'items', newTestimonials);
+                            setTestimonials(newTestimonials);
+                          }}
+                          className="w-14 h-14 rounded-full object-cover border-2 border-bakery-primary"
+                          containerClassName="w-14 h-14"
+                          aspectRatio="square"
+                        />
+                      </div>
+                      <div className="flex flex-col min-w-0">
                         {isEditing ? (
                           <EditableText
                             value={testimonial.customer_name}
@@ -243,10 +246,10 @@ export const Testimonials: React.FC = () => {
                               setTestimonials(newTestimonials);
                             }}
                             tag="h4"
-                            className="font-bold font-sans text-white"
+                            className="font-bold font-sans text-white text-base"
                           />
                         ) : (
-                          <h4 className="font-bold font-sans text-white">{testimonial.customer_name}</h4>
+                          <h4 className="font-bold font-sans text-white text-base">{testimonial.customer_name}</h4>
                         )}
                         {testimonial.customer_role && (
                           isEditing ? (
