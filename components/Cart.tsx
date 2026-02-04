@@ -67,7 +67,7 @@ export const Cart: React.FC<CartProps> = ({
     console.log('No Messenger ID found in websiteData');
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (!facebookMessengerId || items.length === 0) {
       if (!facebookMessengerId) {
         alert("Facebook Messenger is not configured for this store.");
@@ -101,7 +101,7 @@ export const Cart: React.FC<CartProps> = ({
     const encodedMessage = encodeURIComponent(fullMessage);
     const messengerUrl = `https://m.me/${facebookMessengerId}?text=${encodedMessage}`;
 
-    // Save order to Google Spreadsheet in BACKGROUND (fire and forget)
+    // Save order to Google Spreadsheet BEFORE navigating
     const orderTrackingUrl = import.meta.env.VITE_ORDER_TRACKING_URL;
     if (orderTrackingUrl && websiteData) {
       const orderPayload = {
@@ -125,27 +125,29 @@ export const Cart: React.FC<CartProps> = ({
         }
       };
 
-      // Use sendBeacon for reliable background delivery (won't block navigation)
-      const blob = new Blob([JSON.stringify(orderPayload)], { type: 'application/json' });
-      const sent = navigator.sendBeacon(orderTrackingUrl, blob);
-      
-      // Fallback to fetch if sendBeacon fails
-      if (!sent) {
-        fetch(orderTrackingUrl, {
+      try {
+        // Use proper fetch with redirect following (Google Apps Script needs this)
+        await fetch(orderTrackingUrl, {
           method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(orderPayload)
-        }).catch(() => {}); // Ignore errors, don't block checkout
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(orderPayload),
+          redirect: 'follow' // Important: follow Google Apps Script redirects
+        });
+        console.log('Order saved to spreadsheet successfully');
+      } catch (error) {
+        console.error('Failed to save order to spreadsheet:', error);
+        // Don't block checkout even if spreadsheet fails
       }
     }
 
-    // Clear cart and navigate IMMEDIATELY
+    // Clear cart and navigate
     onClear();
     setCustomerDetails({ name: '', email: '', contactNumber: '', orderType: '', location: '', message: '' });
     onClose();
-    
-    // Navigate to Messenger instantly
+
+    // Navigate to Messenger
     window.location.href = messengerUrl;
   };
 
