@@ -39,12 +39,12 @@ function doPost(e) {
   try {
     // Parse the incoming JSON data
     const data = JSON.parse(e.postData.contents);
-    
+
     // Extract order data
     const websiteId = data.websiteId || "unknown";
     const websiteTitle = data.websiteTitle || "Unknown Website";
     const orderData = data.order || {};
-    
+
     // Validate required fields
     if (!orderData.customerName || !orderData.items || !orderData.items.length) {
       throw new Error("Missing required order data: customerName and items are required");
@@ -52,16 +52,16 @@ function doPost(e) {
 
     // Get or create the Drive folder
     const folder = getOrCreateFolder(CONFIG.DRIVE_FOLDER_NAME);
-    
+
     // Get or create spreadsheet for this website
     const spreadsheet = getOrCreateSpreadsheet(folder, websiteId, websiteTitle);
-    
+
     // Get or create the orders sheet
     const ordersSheet = getOrCreateOrdersSheet(spreadsheet, CONFIG.SHEET_NAMES.ORDERS);
-    
+
     // Remove default Sheet1 if it exists
     deleteDefaultSheet(spreadsheet);
-    
+
     // Add the order to the spreadsheet
     addOrderToSheet(ordersSheet, orderData);
 
@@ -69,12 +69,14 @@ function doPost(e) {
     if (CONFIG.ADMIN_NOTIFY_NEW_ORDERS) {
       sendNewOrderEmail(orderData, websiteTitle);
     }
-    
+
     // Update Dashboard
     createOrUpdateDashboardSheet(spreadsheet, websiteTitle);
-    
+
+    // Note: ContentService does not support setting CORS headers
+    // The client must use mode: 'no-cors' to bypass CORS restrictions
     return ContentService.createTextOutput(
-      JSON.stringify({ 
+      JSON.stringify({
         result: "success",
         message: "Order saved successfully",
         spreadsheetUrl: spreadsheet.getUrl()
@@ -83,7 +85,7 @@ function doPost(e) {
 
   } catch (error) {
     console.error("Error processing order:", error);
-    
+
     // Send error notification email
     try {
       MailApp.sendEmail({
@@ -94,11 +96,11 @@ function doPost(e) {
     } catch (emailError) {
       console.error("Failed to send error email:", emailError);
     }
-    
+
     return ContentService.createTextOutput(
-      JSON.stringify({ 
-        result: "error", 
-        error: error.toString() 
+      JSON.stringify({
+        result: "error",
+        error: error.toString()
       })
     ).setMimeType(ContentService.MimeType.JSON);
   } finally {
@@ -106,15 +108,12 @@ function doPost(e) {
   }
 }
 
+// Note: Google Apps Script does not support OPTIONS preflight requests
+// and ContentService does not have setHeaders method.
+// The client must use mode: 'no-cors' to bypass CORS restrictions.
 function doOptions(e) {
-  return ContentService.createTextOutput("")
-    .setMimeType(ContentService.MimeType.JSON)
-    .setHeaders({
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "Access-Control-Max-Age": "3600"
-    });
+  // Return empty response - this won't be reached since GAS doesn't support OPTIONS
+  return ContentService.createTextOutput("").setMimeType(ContentService.MimeType.TEXT);
 }
 
 // ============================================
@@ -124,15 +123,15 @@ function doOptions(e) {
 function getOrCreateFolder(folderName) {
   const folders = DriveApp.getFoldersByName(folderName);
   if (folders.hasNext()) return folders.next();
-  
+
   // Create nested folders if needed
   const parts = folderName.split('/');
   let currentFolder = DriveApp.getRootFolder();
-  
+
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i].trim();
     if (!part) continue;
-    
+
     const subFolders = currentFolder.getFoldersByName(part);
     if (subFolders.hasNext()) {
       currentFolder = subFolders.next();
@@ -146,7 +145,7 @@ function getOrCreateFolder(folderName) {
 function getOrCreateSpreadsheet(folder, websiteId, websiteTitle) {
   const expectedName = websiteTitle + " - Orders";
   const files = folder.getFilesByName(expectedName);
-  
+
   if (files.hasNext()) {
     return SpreadsheetApp.openById(files.next().getId());
   } else {
@@ -160,24 +159,24 @@ function getOrCreateSpreadsheet(folder, websiteId, websiteTitle) {
 
 function getOrCreateOrdersSheet(spreadsheet, sheetName) {
   let sheet = spreadsheet.getSheetByName(sheetName);
-  
+
   if (!sheet) {
     sheet = spreadsheet.insertSheet(sheetName);
-    
+
     // Set up headers
     const headers = [
-      "Order ID", "Date/Time", "Customer Name", "Customer Email", 
-      "Contact Number", "Order Type", "Location", "Items", "Item Details", 
+      "Order ID", "Date/Time", "Customer Name", "Customer Email",
+      "Contact Number", "Order Type", "Location", "Items", "Item Details",
       "Total Amount", "Note", "Status"
     ];
-    
+
     const headerRange = sheet.getRange(1, 1, 1, headers.length);
     headerRange.setValues([headers]);
     headerRange.setFontWeight("bold");
     headerRange.setBackground("#4285f4");
     headerRange.setFontColor("#ffffff");
     headerRange.setHorizontalAlignment("center");
-    
+
     // Data Validation for Status (Column L now)
     const statusRange = sheet.getRange(2, 12, 1000, 1);
     const rule = SpreadsheetApp.newDataValidation()
@@ -185,7 +184,7 @@ function getOrCreateOrdersSheet(spreadsheet, sheetName) {
       .setAllowInvalid(false)
       .build();
     statusRange.setDataValidation(rule);
-    
+
     // Column Widths
     sheet.setColumnWidth(1, 180);  // Order ID
     sheet.setColumnWidth(2, 150);  // Date/Time
@@ -206,18 +205,18 @@ function getOrCreateOrdersSheet(spreadsheet, sheetName) {
     } catch (e) {
       console.warn('Unable to set Date/Time format on orders sheet: ' + e.toString());
     }
-    
+
     sheet.setFrozenRows(1);
     setupStatusColorCoding(sheet);
   }
-  
+
   return sheet;
 }
 
 function setupStatusColorCoding(sheet) {
   const lastRow = Math.max(sheet.getLastRow(), 20);
   const dataRange = sheet.getRange(2, 1, lastRow, 12);
-  
+
   const rules = [
     { status: "Pending", color: "#ffffff" },
     { status: "Processing", color: "#e3f2fd" },
@@ -232,22 +231,22 @@ function setupStatusColorCoding(sheet) {
     .setRanges([dataRange])
     .build()
   );
-  
+
   sheet.setConditionalFormatRules(rules);
 }
 
 function addOrderToSheet(sheet, orderData) {
   const orderId = "ORD-" + new Date().getTime() + "-" + Math.floor(Math.random() * 1000);
   const now = new Date();
-  
+
   const itemsList = orderData.items.map(item => `${item.name} x${item.quantity}`).join("\n");
-  
+
   const itemDetails = orderData.items.map(item => {
     const unitPrice = parseFloat(item.unitPrice) || 0;
     const subtotal = unitPrice * item.quantity;
     return `${item.name}\n  Qty: ${item.quantity} | Unit: ₱${unitPrice.toFixed(2)} | Sub: ₱${subtotal.toFixed(2)}`;
   }).join("\n\n");
-  
+
   const rowData = [
     orderId,
     now,
@@ -262,7 +261,7 @@ function addOrderToSheet(sheet, orderData) {
     orderData.note || "",
     "Pending" // Default Status
   ];
-  
+
   sheet.insertRowBefore(2);
   sheet.getRange(2, 1, 1, rowData.length).setValues([rowData]);
 
@@ -272,7 +271,7 @@ function addOrderToSheet(sheet, orderData) {
   } catch (e) {
     // ignore
   }
-  
+
   // Re-apply validation to new row (Status is now column L = 12)
   const statusCell = sheet.getRange(2, 12);
   const rule = SpreadsheetApp.newDataValidation()
@@ -312,7 +311,7 @@ Note: ${orderData.note || "None"}
 
 Please check the spreadsheet for full details.
     `;
-    
+
     MailApp.sendEmail({
       to: CONFIG.ADMIN_EMAIL,
       subject: subject,
@@ -335,9 +334,9 @@ function createOrUpdateDashboardSheet(spreadsheet, websiteTitle) {
   } else {
     dashboardSheet.clear();
   }
-  
+
   dashboardSheet.setHiddenGridlines(true);
-  
+
   // Header
   dashboardSheet.getRange("B2:M3").merge()
     .setValue(`${websiteTitle} | ORDER DASHBOARD`)
@@ -348,16 +347,16 @@ function createOrUpdateDashboardSheet(spreadsheet, websiteTitle) {
     .setVerticalAlignment("middle");
 
   const ordersSheet = CONFIG.SHEET_NAMES.ORDERS;
-  
+
   // Helper formulas for single sheet
   const getSumFormula = (col) => {
     return `SUM(IFERROR(ARRAYFORMULA(VALUE(SUBSTITUTE(SUBSTITUTE('${ordersSheet}'!${col}2:${col},"₱",""),",",""))), 0))`;
   };
-  
+
   const getCountFormula = (col) => {
     return `COUNTA('${ordersSheet}'!${col}2:${col})`;
   };
-  
+
   const getPendingFormula = () => {
     return `COUNTIF('${ordersSheet}'!L2:L, "Pending") + COUNTIF('${ordersSheet}'!L2:L, "Processing")`;
   };
@@ -369,11 +368,11 @@ function createOrUpdateDashboardSheet(spreadsheet, websiteTitle) {
 
   // Charts Data Preparation (Hidden Columns O, P)
   // We use formulas for Status Distribution so it updates in real-time
-  
+
   // Write Status Data Headers
   dashboardSheet.getRange("O1:P1").setValues([["Status", "Count"]]);
   dashboardSheet.getRange("O1:P1").setFontWeight("bold").setBackground("#f1f3f4");
-  
+
   // Write Status Data Formulas
   CONFIG.ORDER_STATUS_OPTIONS.forEach((status, index) => {
     const row = 2 + index;
@@ -381,10 +380,10 @@ function createOrUpdateDashboardSheet(spreadsheet, websiteTitle) {
     const formula = `=COUNTIF('${ordersSheet}'!L2:L, "${status}")`;
     dashboardSheet.getRange(row, 16).setFormula(formula); // Col P (16)
   });
-  
+
   // For Top Products, we still need static calculation because parsing is complex
   const stats = calculateAggregatedStats(spreadsheet);
-  
+
   // Write Top Products Data
   dashboardSheet.getRange("S1:T1").setValues([["Product", "Qty"]]);
   if (stats.productData.length) {
@@ -408,7 +407,7 @@ function createOrUpdateDashboardSheet(spreadsheet, websiteTitle) {
     .addRange(dashboardSheet.getRange("S1:T6")) // Top 5
     .setPosition(10, 8, 0, 0)
     .setOption('title', 'Top 5 Best Sellers')
-    .setOption('legend', {position: 'none'})
+    .setOption('legend', { position: 'none' })
     .setOption('width', 550)
     .setOption('height', 350)
     .build();
@@ -426,7 +425,7 @@ function createOrUpdateDashboardSheet(spreadsheet, websiteTitle) {
             img.remove();
             console.log('Removed image pic1 from dashboard');
           }
-        } catch (e) {}
+        } catch (e) { }
       });
     }
 
@@ -439,7 +438,7 @@ function createOrUpdateDashboardSheet(spreadsheet, websiteTitle) {
             d.remove();
             console.log('Removed drawing pic1 from dashboard');
           }
-        } catch (e) {}
+        } catch (e) { }
       });
     }
   } catch (err) {
@@ -461,14 +460,14 @@ function createModernCard(sheet, rangeStr, title, formula, numFormat, accentColo
     .setVerticalAlignment("middle")
     .setBackground("#ffffff")
     .setBorder(true, true, true, true, null, null, "#dadce0", SpreadsheetApp.BorderStyle.SOLID);
-    
+
   const titleRange = sheet.getRange(range.getRow() - 1, range.getColumn(), 1, range.getNumColumns());
   titleRange.merge()
     .setValue(title)
     .setFontSize(10)
     .setFontWeight("bold")
     .setFontColor(accentColor);
-    
+
   range.setBorder(true, true, true, true, null, null, accentColor, SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
 }
 
@@ -476,15 +475,15 @@ function calculateAggregatedStats(spreadsheet) {
   const sheet = spreadsheet.getSheetByName(CONFIG.SHEET_NAMES.ORDERS);
   const statusCounts = {};
   const productCounts = {};
-  
+
   if (sheet && sheet.getLastRow() >= 2) {
     const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 12).getValues();
-    
+
     data.forEach(row => {
       // Status is now column L (index 11)
       const status = row[11] || "Unknown";
       statusCounts[status] = (statusCounts[status] || 0) + 1;
-      
+
       // Items is now column H (index 7)
       let itemsStr = row[7].toString();
       let items = itemsStr.includes("\n") ? itemsStr.split("\n") : itemsStr.split(",");
@@ -500,13 +499,13 @@ function calculateAggregatedStats(spreadsheet) {
       });
     });
   }
-  
+
   const statusData = Object.keys(statusCounts).map(s => [s, statusCounts[s]]);
   const productData = Object.keys(productCounts)
     .map(p => [p, productCounts[p]])
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
-    
+
   return { statusData, productData };
 }
 

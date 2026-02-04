@@ -126,14 +126,16 @@ export const Cart: React.FC<CartProps> = ({
       };
 
       try {
-        // Use proper fetch with redirect following (Google Apps Script needs this)
+        // Use no-cors mode to bypass CORS restrictions with Google Apps Script
+        // Note: With no-cors, we can't read the response, but the request still goes through
         await fetch(orderTrackingUrl, {
           method: 'POST',
+          mode: 'no-cors', // Required for Google Apps Script - bypasses CORS preflight
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'text/plain' // Must use text/plain with no-cors mode
           },
           body: JSON.stringify(orderPayload),
-          redirect: 'follow' // Important: follow Google Apps Script redirects
+          redirect: 'follow'
         });
         console.log('Order saved to spreadsheet successfully');
       } catch (error) {
