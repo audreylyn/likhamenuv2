@@ -131,23 +131,21 @@ export const Cart: React.FC<CartProps> = ({
         }
       };
 
-      try {
-        // Use no-cors mode to bypass CORS restrictions with Google Apps Script
-        // Note: With no-cors, we can't read the response, but the request still goes through
-        await fetch(orderTrackingUrl, {
-          method: 'POST',
-          mode: 'no-cors', // Required for Google Apps Script - bypasses CORS preflight
-          headers: {
-            'Content-Type': 'text/plain' // Must use text/plain with no-cors mode
-          },
-          body: JSON.stringify(orderPayload),
-          redirect: 'follow'
-        });
-        console.log('Order saved to spreadsheet successfully');
-      } catch (error) {
+      // Use no-cors mode to bypass CORS restrictions with Google Apps Script
+      // Note: With no-cors, we can't read the response, but the request still goes through
+      // We use keepalive: true to ensure the request completes even if the page unloads
+      fetch(orderTrackingUrl, {
+        method: 'POST',
+        mode: 'no-cors', // Required for Google Apps Script - bypasses CORS preflight
+        headers: {
+          'Content-Type': 'text/plain' // Must use text/plain with no-cors mode
+        },
+        body: JSON.stringify(orderPayload),
+        redirect: 'follow',
+        keepalive: true
+      }).catch(error => {
         console.error('Failed to save order to spreadsheet:', error);
-        // Don't block checkout even if spreadsheet fails
-      }
+      });
     }
 
     // Clear cart and navigate
