@@ -45,6 +45,7 @@ const SECTION_DEFINITIONS = [
   { name: "reservation", label: "Reservation" },
   { name: "testimonials", label: "Testimonials" },
   { name: "faq", label: "FAQ Section" },
+  { name: "payment", label: "Payment Options" },
   { name: "contact", label: "Contact Section" },
   { name: "instagramFeed", label: "Instagram Feed" },
   { name: "chatSupport", label: "Chat Support" },

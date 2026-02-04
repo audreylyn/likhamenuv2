@@ -9,17 +9,18 @@ export const PLANS: ServicePlan[] = [
     {
         id: "basic",
         name: "Basic Plan",
-        price: 999,
-        sections: ["hero", "about", "menu", "contact", "footer"],
+        price: 1999,
+        sections: ["hero", "about", "menu", "payment", "contact", "footer"],
     },
     {
         id: "standard",
         name: "Standard Plan",
-        price: 1499,
+        price: 2999,
         sections: [
             "hero",
             "about",
             "menu",
+            "payment",
             "contact",
             "footer",
             "testimonials",
@@ -31,11 +32,12 @@ export const PLANS: ServicePlan[] = [
     {
         id: "premium",
         name: "Premium Plan",
-        price: 2499,
+        price: 4999,
         sections: [
             "hero",
             "about",
             "menu",
+            "payment",
             "contact",
             "footer",
             "testimonials",
