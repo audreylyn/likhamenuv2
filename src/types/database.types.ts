@@ -389,6 +389,7 @@ export interface SpecialOffer {
   website_id: string;
   title: string;
   description?: string;
+  original_price?: number;
   discount_percentage?: number;
   discount_amount?: number;
   promo_code?: string;
@@ -403,14 +404,17 @@ export interface SpecialOffer {
 }
 
 export interface SpecialOffersConfig {
-  id: string;
-  website_id: string;
+  id?: string;
+  website_id?: string;
   heading: string;
   subheading?: string;
-  layout: string;
-  show_expiry_date: boolean;
-  created_at: string;
-  updated_at: string;
+  layout?: string;
+  show_expiry_date?: boolean;
+  show_timer?: boolean;
+  max_offers?: number;
+  show_expired?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // =====================================================

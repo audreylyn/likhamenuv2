@@ -1,12 +1,134 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Tag, Clock, ArrowRight, Image as ImageIcon, Plus, Upload, Loader2, X } from 'lucide-react';
+import { Tag, Clock, ArrowRight, Image as ImageIcon, Plus, Upload, Loader2, X, ShoppingBag, AlertCircle, ToggleLeft, ToggleRight } from 'lucide-react';
 import type { SpecialOffer, SpecialOffersConfig } from '../src/types/database.types';
 import { EditableText } from '../src/components/editor/EditableText';
 import { useEditor } from '../src/contexts/EditorContext';
 import { useWebsite } from '../src/contexts/WebsiteContext';
 import { supabase } from '../src/lib/supabase';
+import { MenuItem } from '../types';
 
-export const SpecialOffers: React.FC = () => {
+// =====================================================
+// COUNTDOWN TIMER COMPONENT
+// =====================================================
+interface CountdownTimerProps {
+  targetDate: string;
+  className?: string;
+}
+
+const CountdownTimer: React.FC<CountdownTimerProps> = ({ targetDate, className = '' }) => {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const [isExpired, setIsExpired] = useState(false);
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = new Date().getTime();
+      const target = new Date(targetDate).getTime();
+      const difference = target - now;
+
+      if (difference <= 0) {
+        setIsExpired(true);
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        return;
+      }
+
+      setTimeLeft({
+        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((difference % (1000 * 60)) / 1000)
+      });
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+    return () => clearInterval(timer);
+  }, [targetDate]);
+
+  if (isExpired) return null;
+
+  return (
+    <div className={`flex gap-2 ${className}`}>
+      {timeLeft.days > 0 && (
+        <div className="bg-bakery-dark/80 backdrop-blur-sm px-2 py-1 rounded text-center min-w-[40px]">
+          <span className="text-white font-bold text-sm block">{timeLeft.days}</span>
+          <span className="text-white/70 text-[10px] uppercase">Days</span>
+        </div>
+      )}
+      <div className="bg-bakery-dark/80 backdrop-blur-sm px-2 py-1 rounded text-center min-w-[40px]">
+        <span className="text-white font-bold text-sm block">{String(timeLeft.hours).padStart(2, '0')}</span>
+        <span className="text-white/70 text-[10px] uppercase">Hrs</span>
+      </div>
+      <div className="bg-bakery-dark/80 backdrop-blur-sm px-2 py-1 rounded text-center min-w-[40px]">
+        <span className="text-white font-bold text-sm block">{String(timeLeft.minutes).padStart(2, '0')}</span>
+        <span className="text-white/70 text-[10px] uppercase">Min</span>
+      </div>
+      <div className="bg-bakery-dark/80 backdrop-blur-sm px-2 py-1 rounded text-center min-w-[40px]">
+        <span className="text-white font-bold text-sm block">{String(timeLeft.seconds).padStart(2, '0')}</span>
+        <span className="text-white/70 text-[10px] uppercase">Sec</span>
+      </div>
+    </div>
+  );
+};
+
+// =====================================================
+// STATUS BADGE HELPERS
+// =====================================================
+type OfferStatus = 'coming_soon' | 'active' | 'expiring_soon' | 'expired';
+
+const getOfferStatus = (offer: SpecialOffer): OfferStatus => {
+  const now = new Date();
+
+  if (offer.valid_from) {
+    const validFrom = new Date(offer.valid_from);
+    // Check if valid_from is a future date (not a text like "Limited Time")
+    if (!isNaN(validFrom.getTime()) && validFrom > now) {
+      return 'coming_soon';
+    }
+  }
+
+  if (offer.valid_until) {
+    const validUntil = new Date(offer.valid_until);
+    if (!isNaN(validUntil.getTime())) {
+      if (validUntil < now) return 'expired';
+      // Expiring soon if less than 24 hours left
+      const hoursLeft = (validUntil.getTime() - now.getTime()) / (1000 * 60 * 60);
+      if (hoursLeft < 24) return 'expiring_soon';
+    }
+  }
+
+  return 'active';
+};
+
+const StatusBadge: React.FC<{ status: OfferStatus }> = ({ status }) => {
+  const styles = {
+    coming_soon: 'bg-blue-500 text-white',
+    active: 'bg-green-500 text-white',
+    expiring_soon: 'bg-orange-500 text-white animate-pulse',
+    expired: 'bg-gray-500 text-white'
+  };
+
+  const labels = {
+    coming_soon: 'Coming Soon',
+    active: 'Active',
+    expiring_soon: 'Ends Soon!',
+    expired: 'Expired'
+  };
+
+  return (
+    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${styles[status]}`}>
+      {labels[status]}
+    </span>
+  );
+};
+
+// =====================================================
+// MAIN COMPONENT
+// =====================================================
+interface SpecialOffersProps {
+  addToCart?: (item: MenuItem) => void;
+}
+
+export const SpecialOffers: React.FC<SpecialOffersProps> = ({ addToCart }) => {
   const [config, setConfig] = useState<SpecialOffersConfig | null>(null);
   const [offers, setOffers] = useState<SpecialOffer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,7 +146,6 @@ export const SpecialOffers: React.FC = () => {
       }
       setLoading(false);
     } else if (!websiteLoading) {
-      // Default config if missing? Or just show nothing/loading
       setLoading(false);
     }
   }, [websiteData, websiteLoading]);
@@ -68,7 +189,21 @@ export const SpecialOffers: React.FC = () => {
   };
 
   const handleClaimDeal = (offer: SpecialOffer) => {
-    // Scroll to menu section to view/add items
+    // If addToCart is available, add the offer as a cart item
+    if (addToCart) {
+      const menuItem: MenuItem = {
+        id: parseInt(offer.id.slice(0, 8), 16) || Math.floor(Math.random() * 10000000),
+        name: offer.title,
+        description: offer.description || '',
+        price: offer.discount_amount || 0,
+        category: 'Special Offer' as any,
+        image: offer.image_url || 'https://images.unsplash.com/photo-1509440159596-0249088772ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+      };
+      addToCart(menuItem);
+      return;
+    }
+
+    // Fallback: scroll to menu section
     const menuSection = document.getElementById('menu');
     if (menuSection) {
       menuSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -88,21 +223,19 @@ export const SpecialOffers: React.FC = () => {
     );
   }
 
-  // Show section even if no offers, so user can add them
   if (!config) {
     if (isEditing) {
-      // Initialize default config and show add button
       const initializeConfig = async () => {
         const defaultConfig: SpecialOffersConfig = {
           heading: 'Special Offers',
           subheading: 'Limited Time Only',
           show_timer: true,
-          max_offers: 2
+          max_offers: 4
         };
         await saveField('specialOffers', 'config', defaultConfig);
         setConfig(defaultConfig);
       };
-      
+
       return (
         <section id="specialOffers" className="py-24 bg-bakery-primary/5 relative overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -122,11 +255,20 @@ export const SpecialOffers: React.FC = () => {
     return null;
   }
 
-  // Limit to 2 offers only
-  const displayedOffers = offers.slice(0, 2);
+  // Filter offers: show all in edit mode, hide expired in public view
+  const maxOffers = (config as any).max_offers || 4;
+  const filteredOffers = offers.filter(offer => {
+    if (isEditing) return true;
+    const status = getOfferStatus(offer);
+    return status !== 'expired' && offer.is_active;
+  });
+  const displayedOffers = filteredOffers.slice(0, maxOffers);
 
   // If no offers but in edit mode, show empty state
   if (offers.length === 0 && !isEditing) return null;
+
+  // Empty state for public view
+  if (displayedOffers.length === 0 && !isEditing) return null;
 
   return (
     <section id="specialOffers" className="py-24 bg-bakery-primary/5 relative overflow-hidden">
@@ -171,32 +313,53 @@ export const SpecialOffers: React.FC = () => {
           <div className="w-24 h-1 bg-bakery-sand mx-auto rounded-full mt-6" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+        {/* Carousel container for mobile, grid for desktop */}
+        <div className="md:grid md:grid-cols-2 gap-8 lg:gap-12 flex overflow-x-auto snap-x snap-mandatory md:overflow-visible pb-4 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide">
           {displayedOffers.map((offer) => (
-            <OfferCard
-              key={offer.id}
-              offer={offer}
-              offers={offers}
-              setOffers={setOffers}
-              isEditing={isEditing}
-              saveField={saveField}
-              onDelete={() => handleDeleteOffer(offer.id)}
-              onClaimDeal={() => handleClaimDeal(offer)}
-            />
+            <div key={offer.id} className="flex-shrink-0 w-[85vw] md:w-auto snap-center">
+              <OfferCard
+                offer={offer}
+                offers={offers}
+                setOffers={setOffers}
+                isEditing={isEditing}
+                saveField={saveField}
+                onDelete={() => handleDeleteOffer(offer.id)}
+                onClaimDeal={() => handleClaimDeal(offer)}
+                showTimer={(config as any).show_timer}
+                hasAddToCart={!!addToCart}
+              />
+            </div>
           ))}
 
-          {/* Add Offer Button - show when editing and less than 2 offers */}
-          {isEditing && offers.length < 2 && (
-            <button
-              onClick={handleAddOffer}
-              className="h-96 rounded-2xl border-2 border-dashed border-bakery-sand/60 hover:border-bakery-primary hover:bg-bakery-cream/60 transition-colors flex flex-col items-center justify-center gap-4 p-8 bg-bakery-light/50 text-bakery-text/70 hover:text-bakery-primary"
-            >
-              <Plus size={48} className="opacity-50" />
-              <span className="font-serif text-xl font-bold">Add Special Offer</span>
-              <span className="text-sm opacity-70">Click to add a new offer</span>
-            </button>
+          {/* Add Offer Button - show when editing */}
+          {isEditing && offers.length < maxOffers && (
+            <div className="flex-shrink-0 w-[85vw] md:w-auto snap-center">
+              <button
+                onClick={handleAddOffer}
+                className="h-96 w-full rounded-2xl border-2 border-dashed border-bakery-sand/60 hover:border-bakery-primary hover:bg-bakery-cream/60 transition-colors flex flex-col items-center justify-center gap-4 p-8 bg-bakery-light/50 text-bakery-text/70 hover:text-bakery-primary"
+              >
+                <Plus size={48} className="opacity-50" />
+                <span className="font-serif text-xl font-bold">Add Special Offer</span>
+                <span className="text-sm opacity-70">Click to add a new offer</span>
+              </button>
+            </div>
           )}
         </div>
+
+        {/* Empty state for editors */}
+        {isEditing && offers.length === 0 && (
+          <div className="text-center py-12 bg-bakery-light/30 rounded-xl border-2 border-dashed border-bakery-sand/40">
+            <AlertCircle className="mx-auto text-bakery-text/40 mb-4" size={48} />
+            <p className="text-bakery-text/60 font-sans mb-4">No special offers yet</p>
+            <button
+              onClick={handleAddOffer}
+              className="px-6 py-3 bg-bakery-primary text-white rounded-full font-bold hover:bg-bakery-dark transition-colors inline-flex items-center gap-2"
+            >
+              <Plus size={20} />
+              Add Your First Offer
+            </button>
+          </div>
+        )}
 
         <div className="mt-12 text-center">
           <p className="text-bakery-dark/60 font-sans italic text-sm">
@@ -208,7 +371,9 @@ export const SpecialOffers: React.FC = () => {
   );
 };
 
-// Offer Card Component with file upload
+// =====================================================
+// OFFER CARD COMPONENT
+// =====================================================
 const OfferCard: React.FC<{
   offer: SpecialOffer;
   offers: SpecialOffer[];
@@ -217,9 +382,12 @@ const OfferCard: React.FC<{
   saveField: (section: string, field: string, value: any) => Promise<void>;
   onDelete: () => void;
   onClaimDeal: () => void;
-}> = ({ offer, offers, setOffers, isEditing, saveField, onDelete, onClaimDeal }) => {
+  showTimer?: boolean;
+  hasAddToCart?: boolean;
+}> = ({ offer, offers, setOffers, isEditing, saveField, onDelete, onClaimDeal, showTimer, hasAddToCart }) => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const status = getOfferStatus(offer);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -260,8 +428,11 @@ const OfferCard: React.FC<{
     }
   };
 
+
+  const isInactive = offer.is_active === false;
+
   return (
-    <div className="group relative overflow-hidden rounded-2xl shadow-xl h-96 cursor-pointer">
+    <div className={`group relative overflow-hidden rounded-2xl shadow-xl h-96 cursor-pointer transition-all duration-300 hover:shadow-2xl ${status === 'expired' || isInactive ? 'opacity-60 grayscale' : ''}`}>
       <input
         ref={fileInputRef}
         type="file"
@@ -283,9 +454,52 @@ const OfferCard: React.FC<{
         </div>
       )}
 
+      {/* Inactive overlay - shown when is_active is false */}
+      {isInactive && !isEditing && (
+        <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-30">
+          <span className="bg-gray-800 text-white px-6 py-3 rounded-xl font-bold text-lg uppercase tracking-wider">
+            Not Available
+          </span>
+        </div>
+      )}
+
+      {/* Status Badge - only show in editing mode or for expiring/coming soon */}
+      {(isEditing || status === 'expiring_soon' || status === 'coming_soon' || isInactive) && (
+        <div className="absolute top-4 left-4 z-20">
+          {isInactive && !isEditing ? (
+            <div className="bg-gray-500 text-white px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide flex items-center gap-1">
+              <AlertCircle size={14} />
+              Inactive
+            </div>
+          ) : (
+            <StatusBadge status={status} />
+          )}
+        </div>
+      )}
+
       {/* Edit controls */}
       {isEditing && !isUploading && (
         <div className="absolute top-4 right-4 flex gap-2 z-50">
+          {/* Status Toggle */}
+          <button
+            onClick={async (e) => {
+              e.stopPropagation();
+              const currentStatus = offer.is_active !== false;
+              const newOffers = offers.map(o => o.id === offer.id ? { ...o, is_active: !currentStatus } : o);
+              await saveField('specialOffers', 'items', newOffers);
+              setOffers(newOffers);
+            }}
+            className={`p-2 rounded-full shadow-lg transition-colors ${offer.is_active !== false
+              ? 'bg-green-500 hover:bg-green-600 text-white'
+              : 'bg-gray-400 hover:bg-gray-500 text-white'
+              }`}
+            title={offer.is_active !== false ? 'Active - Click to deactivate' : 'Inactive - Click to activate'}
+          >
+            {offer.is_active !== false
+              ? <ToggleRight size={16} />
+              : <ToggleLeft size={16} />}
+          </button>
+          {/* Upload Button */}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -296,6 +510,7 @@ const OfferCard: React.FC<{
           >
             <Upload size={16} />
           </button>
+          {/* Delete Button */}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -306,6 +521,13 @@ const OfferCard: React.FC<{
           >
             <X size={16} />
           </button>
+        </div>
+      )}
+
+      {/* Countdown Timer */}
+      {showTimer && offer.valid_until && status !== 'expired' && (
+        <div className="absolute top-14 left-4 z-20">
+          <CountdownTimer targetDate={offer.valid_until} />
         </div>
       )}
 
@@ -359,23 +581,60 @@ const OfferCard: React.FC<{
         )}
         <div className="flex items-center justify-between border-t border-white/20 pt-4 mt-auto">
           <div className="flex flex-col">
-            {offer.discount_percentage ? (
+            {/* Original price (strikethrough) */}
+            {offer.original_price && offer.original_price > (offer.discount_amount || 0) ? (
+              isEditing ? (
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-gray-400">Was:</span>
+                  <EditableText
+                    value={offer.original_price?.toString() || '0'}
+                    onSave={async (newValue) => {
+                      const amount = parseFloat(newValue) || 0;
+                      const newOffers = offers.map(o => o.id === offer.id ? { ...o, original_price: amount } : o);
+                      await saveField('specialOffers', 'items', newOffers);
+                      setOffers(newOffers);
+                    }}
+                    tag="span"
+                    className="text-sm text-gray-300 line-through"
+                  />
+                </div>
+              ) : (
+                <span className="text-sm text-gray-300 line-through">₱{offer.original_price}</span>
+              )
+            ) : offer.discount_percentage ? (
               <span className="text-sm text-gray-300">Save {offer.discount_percentage}%</span>
-            ) : offer.discount_amount ? (
-              <span className="text-sm text-gray-300 line-through">₱{offer.discount_amount}</span>
+            ) : isEditing ? (
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-gray-400">Was:</span>
+                <EditableText
+                  value={offer.original_price?.toString() || '0'}
+                  onSave={async (newValue) => {
+                    const amount = parseFloat(newValue) || 0;
+                    const newOffers = offers.map(o => o.id === offer.id ? { ...o, original_price: amount > 0 ? amount : undefined } : o);
+                    await saveField('specialOffers', 'items', newOffers);
+                    setOffers(newOffers);
+                  }}
+                  tag="span"
+                  className="text-sm text-gray-300 line-through"
+                />
+              </div>
             ) : null}
+            {/* Sale price */}
             {isEditing ? (
-              <EditableText
-                value={offer.discount_amount?.toString() || '0'}
-                onSave={async (newValue) => {
-                  const amount = parseFloat(newValue) || 0;
-                  const newOffers = offers.map(o => o.id === offer.id ? { ...o, discount_amount: amount } : o);
-                  await saveField('specialOffers', 'items', newOffers);
-                  setOffers(newOffers);
-                }}
-                tag="span"
-                className="font-serif text-2xl font-bold text-white"
-              />
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-gray-400">Now:</span>
+                <EditableText
+                  value={offer.discount_amount?.toString() || '0'}
+                  onSave={async (newValue) => {
+                    const amount = parseFloat(newValue) || 0;
+                    const newOffers = offers.map(o => o.id === offer.id ? { ...o, discount_amount: amount } : o);
+                    await saveField('specialOffers', 'items', newOffers);
+                    setOffers(newOffers);
+                  }}
+                  tag="span"
+                  className="font-serif text-2xl font-bold text-white"
+                />
+              </div>
             ) : (
               <span className="font-serif text-2xl font-bold text-white">₱{offer.discount_amount || 0}</span>
             )}
@@ -383,14 +642,24 @@ const OfferCard: React.FC<{
           <button
             onClick={(e) => {
               e.stopPropagation();
-              if (!isEditing) {
+              if (!isEditing && status !== 'expired' && status !== 'coming_soon') {
                 onClaimDeal();
               }
             }}
-            className="bg-white text-bakery-dark px-6 py-2.5 rounded-full font-bold text-sm hover:bg-bakery-sand transition-colors flex items-center gap-2 shadow-lg group-hover:shadow-white/20"
+            disabled={status === 'expired' || status === 'coming_soon'}
+            className="bg-white text-bakery-dark px-6 py-2.5 rounded-full font-bold text-sm hover:bg-bakery-sand transition-colors flex items-center gap-2 shadow-lg group-hover:shadow-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Claim Deal
-            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+            {hasAddToCart ? (
+              <>
+                <ShoppingBag size={16} />
+                Add to Cart
+              </>
+            ) : (
+              <>
+                Claim Deal
+                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+              </>
+            )}
           </button>
         </div>
       </div>

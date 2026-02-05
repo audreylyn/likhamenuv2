@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MenuItem } from '../types';
-import { ShoppingBag, Eye, X, Star, Plus, Trash2 } from 'lucide-react';
+import { ShoppingBag, Eye, X, Star, Plus, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { getWebsiteId } from '../src/lib/supabase'; // Keep getWebsiteId if needed for other things, but maybe not?
 import type { MenuCategory, MenuItem as DBMenuItem, MenuSectionConfig } from '../src/types/database.types';
 import { EditableText } from '../src/components/editor/EditableText';
@@ -186,8 +186,8 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                 <button
                   onClick={() => setActiveCategory(category)}
                   className={`px-6 py-2 rounded-full font-serif font-bold text-lg capitalize transition-all duration-300 relative ${activeCategory === category
-                      ? 'bg-bakery-primary text-white shadow-md transform scale-105'
-                      : 'bg-bakery-light text-bakery-dark border border-bakery-sand hover:border-bakery-primary hover:text-bakery-primary'
+                    ? 'bg-bakery-primary text-white shadow-md transform scale-105'
+                    : 'bg-bakery-light text-bakery-dark border border-bakery-sand hover:border-bakery-primary hover:text-bakery-primary'
                     }`}
                 >
                   {isEditing && !isAllCategory && categoryObj ? (
@@ -249,168 +249,211 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
 
         {/* Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10">
-          {filteredItems.map((item) => (
-            <div
-              key={item.id}
-              className="group bg-bakery-light rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col h-full border border-bakery-sand/30"
-            >
-              <div className="relative h-64 overflow-hidden cursor-pointer" onClick={() => !isEditing && setSelectedItem(item)}>
-                <EditableImage
-                  src={item.image}
-                  alt={item.name}
-                  onSave={async (newUrl) => {
-                    const updatedItems = dbMenuItems.map(db =>
-                      db.id === item.id ? { ...db, image_url: newUrl } : db
-                    );
-                    await saveField('menu', 'items', updatedItems);
-                    setDbMenuItems(updatedItems);
-                    setMenuItems(updatedItems.map(adaptMenuItem));
-                    if (selectedItem?.id === item.id) {
-                      setSelectedItem({ ...selectedItem, image: newUrl });
-                    }
-                  }}
-                  className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out"
-                />
-                {isEditing ? (
-                  <div className="absolute top-4 left-4 bg-bakery-light/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold font-sans uppercase tracking-wider text-bakery-dark shadow-sm z-10">
-                    <select
-                      value={item.category}
-                      onChange={async (e) => {
-                        const newCategoryId = e.target.value;
-                        const updatedItems = dbMenuItems.map(db =>
-                          db.id === item.id ? { ...db, category_id: newCategoryId } : db
-                        );
-                        await saveField('menu', 'items', updatedItems);
-                        setDbMenuItems(updatedItems);
-                        setMenuItems(updatedItems.map(adaptMenuItem));
-                      }}
-                      className="bg-transparent border-none text-bakery-dark font-bold font-sans uppercase tracking-wider text-xs cursor-pointer outline-none"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {categories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.name.toUpperCase()}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
-                  <div className="absolute top-4 left-4 bg-bakery-light/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold font-sans uppercase tracking-wider text-bakery-dark shadow-sm z-10">
-                    {getCategoryNameForItem(item.category)}
-                  </div>
-                )}
-              </div>
+          {filteredItems.map((item) => {
+            const dbItem = dbMenuItems.find(db => db.id === item.id);
+            const isSoldOut = dbItem?.is_available === false;
 
-              <div className="p-6 flex flex-col flex-grow relative">
-                {isEditing && (
-                  <button
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      if (window.confirm(`Are you sure you want to delete "${item.name}"?`)) {
-                        try {
-                          const updatedItems = dbMenuItems.filter(db => db.id !== item.id);
-                          await saveField('menu', 'items', updatedItems);
-
-                          setDbMenuItems(updatedItems);
-                          setMenuItems(updatedItems.map(adaptMenuItem));
-
-                          if (selectedItem && selectedItem.id === item.id) {
-                            setSelectedItem(null);
-                          }
-                        } catch (error) {
-                          console.error('Error deleting product:', error);
-                          alert('Failed to delete product. Please try again.');
-                        }
-                      }
-                    }}
-                    className="absolute top-2 right-2 z-10 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition-colors shadow-lg"
-                    title="Delete product"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                )}
-                <div className="flex justify-between items-start mb-3">
-                  {isEditing ? (
-                    <EditableText
-                      value={item.name}
-                      onSave={async (newValue) => {
-                        const updatedItems = dbMenuItems.map(db =>
-                          db.id === item.id ? { ...db, name: newValue } : db
-                        );
-                        await saveField('menu', 'items', updatedItems);
-                        setDbMenuItems(updatedItems);
-                        setMenuItems(updatedItems.map(adaptMenuItem));
-                      }}
-                      tag="h3"
-                      className="font-serif text-2xl font-bold text-bakery-dark group-hover:text-bakery-primary transition-colors cursor-pointer"
-                    />
-                  ) : (
-                    <h3 className="font-serif text-2xl font-bold text-bakery-dark group-hover:text-bakery-primary transition-colors cursor-pointer" onClick={() => setSelectedItem(item)}>
-                      {item.name}
-                    </h3>
+            return (
+              <div
+                key={item.id}
+                className={`group bg-bakery-light rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col h-full border border-bakery-sand/30 ${isSoldOut && !isEditing ? 'opacity-75' : ''}`}
+              >
+                <div className={`relative h-64 overflow-hidden cursor-pointer ${isSoldOut ? 'grayscale' : ''}`} onClick={() => !isEditing && setSelectedItem(item)}>
+                  {/* Sold Out Overlay */}
+                  {isSoldOut && !isEditing && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-20">
+                      <span className="bg-gray-800 text-white px-4 py-2 rounded-lg font-bold text-sm uppercase tracking-wider">
+                        Sold Out
+                      </span>
+                    </div>
                   )}
-                  {isEditing ? (
-                    <EditableText
-                      value={item.price.toString()}
-                      onSave={async (newValue) => {
-                        const price = parseFloat(newValue) || 0;
-                        const updatedItems = dbMenuItems.map(db =>
-                          db.id === item.id ? { ...db, price } : db
-                        );
-                        await saveField('menu', 'items', updatedItems);
-                        setDbMenuItems(updatedItems);
-                        setMenuItems(updatedItems.map(adaptMenuItem));
-                      }}
-                      tag="span"
-                      className="font-sans font-bold text-xl text-bakery-accent whitespace-nowrap"
-                    />
-                  ) : (
-                    <span className="font-sans font-bold text-xl text-bakery-accent whitespace-nowrap">
-                      ₱{item.price}
-                    </span>
-                  )}
-                </div>
-
-                {isEditing ? (
-                  <EditableText
-                    value={item.description}
-                    onSave={async (newValue) => {
+                  <EditableImage
+                    src={item.image}
+                    alt={item.name}
+                    onSave={async (newUrl) => {
                       const updatedItems = dbMenuItems.map(db =>
-                        db.id === item.id ? { ...db, description: newValue } : db
+                        db.id === item.id ? { ...db, image_url: newUrl } : db
                       );
                       await saveField('menu', 'items', updatedItems);
                       setDbMenuItems(updatedItems);
                       setMenuItems(updatedItems.map(adaptMenuItem));
+                      if (selectedItem?.id === item.id) {
+                        setSelectedItem({ ...selectedItem, image: newUrl });
+                      }
                     }}
-                    tag="p"
-                    multiline
-                    className="text-bakery-text/80 font-sans text-sm leading-relaxed mb-6 flex-grow border-b border-bakery-sand/20 pb-4"
+                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out"
                   />
-                ) : (
-                  <p className="text-bakery-text/80 font-sans text-sm leading-relaxed mb-6 flex-grow border-b border-bakery-sand/20 pb-4">
-                    {item.description}
-                  </p>
-                )}
+                  {isEditing ? (
+                    <div className="absolute top-4 left-4 bg-bakery-light/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold font-sans uppercase tracking-wider text-bakery-dark shadow-sm z-10">
+                      <select
+                        value={item.category}
+                        onChange={async (e) => {
+                          const newCategoryId = e.target.value;
+                          const updatedItems = dbMenuItems.map(db =>
+                            db.id === item.id ? { ...db, category_id: newCategoryId } : db
+                          );
+                          await saveField('menu', 'items', updatedItems);
+                          setDbMenuItems(updatedItems);
+                          setMenuItems(updatedItems.map(adaptMenuItem));
+                        }}
+                        className="bg-transparent border-none text-bakery-dark font-bold font-sans uppercase tracking-wider text-xs cursor-pointer outline-none"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {categories.map((cat) => (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.name.toUpperCase()}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="absolute top-4 left-4 bg-bakery-light/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold font-sans uppercase tracking-wider text-bakery-dark shadow-sm z-10">
+                      {getCategoryNameForItem(item.category)}
+                    </div>
+                  )}
+                </div>
 
-                <div className="flex gap-3 mt-auto">
-                  <button
-                    onClick={() => setSelectedItem(item)}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border-2 border-bakery-sand text-bakery-dark font-sans font-bold text-sm hover:border-bakery-primary hover:bg-bakery-primary hover:text-white transition-all duration-300"
-                  >
-                    <Eye size={18} />
-                    View
-                  </button>
-                  <button
-                    onClick={(e) => handleAddClick(item, e)}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-bakery-dark text-white font-sans font-bold text-sm hover:bg-bakery-accent shadow-md hover:shadow-lg transition-all duration-300"
-                  >
-                    <ShoppingBag size={18} />
-                    Add
-                  </button>
+                <div className="p-6 flex flex-col flex-grow relative">
+                  {isEditing && (
+                    <div className="absolute top-2 right-2 z-10 flex gap-2">
+                      {/* Status Toggle */}
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          const dbItem = dbMenuItems.find(db => db.id === item.id);
+                          const currentStatus = dbItem?.is_available !== false;
+                          const updatedItems = dbMenuItems.map(db =>
+                            db.id === item.id ? { ...db, is_available: !currentStatus } : db
+                          );
+                          await saveField('menu', 'items', updatedItems);
+                          setDbMenuItems(updatedItems);
+                          setMenuItems(updatedItems.map(adaptMenuItem));
+                        }}
+                        className={`rounded-full p-1.5 shadow-lg transition-colors ${dbMenuItems.find(db => db.id === item.id)?.is_available !== false
+                          ? 'bg-green-500 hover:bg-green-600 text-white'
+                          : 'bg-gray-400 hover:bg-gray-500 text-white'
+                          }`}
+                        title={dbMenuItems.find(db => db.id === item.id)?.is_available !== false ? 'Available - Click to mark Sold Out' : 'Sold Out - Click to mark Available'}
+                      >
+                        {dbMenuItems.find(db => db.id === item.id)?.is_available !== false
+                          ? <ToggleRight size={14} />
+                          : <ToggleLeft size={14} />}
+                      </button>
+                      {/* Delete Button */}
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (window.confirm(`Are you sure you want to delete "${item.name}"?`)) {
+                            try {
+                              const updatedItems = dbMenuItems.filter(db => db.id !== item.id);
+                              await saveField('menu', 'items', updatedItems);
+
+                              setDbMenuItems(updatedItems);
+                              setMenuItems(updatedItems.map(adaptMenuItem));
+
+                              if (selectedItem && selectedItem.id === item.id) {
+                                setSelectedItem(null);
+                              }
+                            } catch (error) {
+                              console.error('Error deleting product:', error);
+                              alert('Failed to delete product. Please try again.');
+                            }
+                          }
+                        }}
+                        className="bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition-colors shadow-lg"
+                        title="Delete product"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-start mb-3">
+                    {isEditing ? (
+                      <EditableText
+                        value={item.name}
+                        onSave={async (newValue) => {
+                          const updatedItems = dbMenuItems.map(db =>
+                            db.id === item.id ? { ...db, name: newValue } : db
+                          );
+                          await saveField('menu', 'items', updatedItems);
+                          setDbMenuItems(updatedItems);
+                          setMenuItems(updatedItems.map(adaptMenuItem));
+                        }}
+                        tag="h3"
+                        className="font-serif text-2xl font-bold text-bakery-dark group-hover:text-bakery-primary transition-colors cursor-pointer"
+                      />
+                    ) : (
+                      <h3 className="font-serif text-2xl font-bold text-bakery-dark group-hover:text-bakery-primary transition-colors cursor-pointer" onClick={() => setSelectedItem(item)}>
+                        {item.name}
+                      </h3>
+                    )}
+                    {isEditing ? (
+                      <EditableText
+                        value={item.price.toString()}
+                        onSave={async (newValue) => {
+                          const price = parseFloat(newValue) || 0;
+                          const updatedItems = dbMenuItems.map(db =>
+                            db.id === item.id ? { ...db, price } : db
+                          );
+                          await saveField('menu', 'items', updatedItems);
+                          setDbMenuItems(updatedItems);
+                          setMenuItems(updatedItems.map(adaptMenuItem));
+                        }}
+                        tag="span"
+                        className="font-sans font-bold text-xl text-bakery-accent whitespace-nowrap"
+                      />
+                    ) : (
+                      <span className="font-sans font-bold text-xl text-bakery-accent whitespace-nowrap">
+                        ₱{item.price}
+                      </span>
+                    )}
+                  </div>
+
+                  {isEditing ? (
+                    <EditableText
+                      value={item.description}
+                      onSave={async (newValue) => {
+                        const updatedItems = dbMenuItems.map(db =>
+                          db.id === item.id ? { ...db, description: newValue } : db
+                        );
+                        await saveField('menu', 'items', updatedItems);
+                        setDbMenuItems(updatedItems);
+                        setMenuItems(updatedItems.map(adaptMenuItem));
+                      }}
+                      tag="p"
+                      multiline
+                      className="text-bakery-text/80 font-sans text-sm leading-relaxed mb-6 flex-grow border-b border-bakery-sand/20 pb-4"
+                    />
+                  ) : (
+                    <p className="text-bakery-text/80 font-sans text-sm leading-relaxed mb-6 flex-grow border-b border-bakery-sand/20 pb-4">
+                      {item.description}
+                    </p>
+                  )}
+
+                  <div className="flex gap-3 mt-auto">
+                    <button
+                      onClick={() => setSelectedItem(item)}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border-2 border-bakery-sand text-bakery-dark font-sans font-bold text-sm hover:border-bakery-primary hover:bg-bakery-primary hover:text-white transition-all duration-300"
+                    >
+                      <Eye size={18} />
+                      View
+                    </button>
+                    <button
+                      onClick={(e) => !isSoldOut && handleAddClick(item, e)}
+                      disabled={isSoldOut}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-sans font-bold text-sm shadow-md transition-all duration-300 ${isSoldOut
+                        ? 'bg-gray-400 text-white cursor-not-allowed'
+                        : 'bg-bakery-dark text-white hover:bg-bakery-accent hover:shadow-lg'
+                        }`}
+                    >
+                      <ShoppingBag size={18} />
+                      {isSoldOut ? 'Sold Out' : 'Add'}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {isEditing && (
             <button
               onClick={async () => {
@@ -568,17 +611,17 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                           setMenuItems(updatedItems.map(adaptMenuItem));
                         }}
                         tag="span"
-                            className="text-bakery-text/70 text-sm font-sans ml-2"
+                        className="text-bakery-text/70 text-sm font-sans ml-2"
                       />
                     ) : (
-                          <span className="text-bakery-text/70 text-sm font-sans ml-2">
+                      <span className="text-bakery-text/70 text-sm font-sans ml-2">
                         ({selectedItem.review_count || 24} reviews)
                       </span>
                     )}
                   </div>
                 </div>
 
-                    <p className="text-bakery-text/80 font-sans leading-relaxed mb-6">
+                <p className="text-bakery-text/80 font-sans leading-relaxed mb-6">
                   {selectedItem.description}
                 </p>
 
@@ -588,16 +631,28 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                   </span>
                 </div>
 
-                <button
-                  onClick={() => {
-                    addToCart(selectedItem);
-                    setSelectedItem(null);
-                  }}
-                  className="w-full py-3.5 bg-bakery-primary text-white rounded-xl font-serif font-bold text-lg hover:bg-bakery-dark hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
-                >
-                  <ShoppingBag size={20} />
-                  Add to Order
-                </button>
+                {(() => {
+                  const modalDbItem = dbMenuItems.find(db => db.id === selectedItem.id);
+                  const modalIsSoldOut = modalDbItem?.is_available === false;
+                  return (
+                    <button
+                      onClick={() => {
+                        if (!modalIsSoldOut) {
+                          addToCart(selectedItem);
+                          setSelectedItem(null);
+                        }
+                      }}
+                      disabled={modalIsSoldOut}
+                      className={`w-full py-3.5 rounded-xl font-serif font-bold text-lg transition-all duration-300 flex items-center justify-center gap-2 ${modalIsSoldOut
+                          ? 'bg-gray-400 text-white cursor-not-allowed'
+                          : 'bg-bakery-primary text-white hover:bg-bakery-dark hover:shadow-lg'
+                        }`}
+                    >
+                      <ShoppingBag size={20} />
+                      {modalIsSoldOut ? 'Sold Out' : 'Add to Order'}
+                    </button>
+                  );
+                })()}
               </div>
             </div>
           </div>

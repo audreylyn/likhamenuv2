@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Quote, ChevronLeft, ChevronRight, X, Plus } from 'lucide-react';
+import { Star, Quote, ChevronLeft, ChevronRight, X, Plus, Upload } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Testimonial, TestimonialsConfig } from '../src/types/database.types';
 import { EditableText } from '../src/components/editor/EditableText';
-import { EditableImage } from '../src/components/editor/EditableImage';
 import { useEditor } from '../src/contexts/EditorContext';
 import { useWebsite } from '../src/contexts/WebsiteContext';
+import { supabase } from '../src/lib/supabase';
 
 export const Testimonials: React.FC = () => {
   const [config, setConfig] = useState<TestimonialsConfig | null>(null);
@@ -220,21 +220,68 @@ export const Testimonials: React.FC = () => {
                     )}
 
                     <div className="flex items-center gap-4 mt-auto">
-                      <div className="relative flex-shrink-0">
-                        <EditableImage
+                      <div className={`relative flex-shrink-0`}>
+                        <img
                           src={testimonial.customer_image_url || `https://i.pravatar.cc/150?u=${testimonial.id}`}
                           alt={testimonial.customer_name}
-                          onSave={async (newUrl) => {
-                            const newTestimonials = testimonials.map(t =>
-                              t.id === testimonial.id ? { ...t, customer_image_url: newUrl } : t
-                            );
-                            await saveField('testimonials', 'items', newTestimonials);
-                            setTestimonials(newTestimonials);
-                          }}
                           className="w-14 h-14 rounded-full object-cover border-2 border-bakery-primary"
-                          containerClassName="w-14 h-14"
-                          aspectRatio="square"
                         />
+                        {isEditing && (
+                          <>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              id={`testimonial-image-${testimonial.id}`}
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+
+                                if (!file.type.startsWith('image/')) {
+                                  alert('Please select an image file');
+                                  return;
+                                }
+
+                                if (file.size > 5 * 1024 * 1024) {
+                                  alert('Image must be less than 5MB');
+                                  return;
+                                }
+
+                                try {
+                                  const fileExt = file.name.split('.').pop();
+                                  const fileName = `testimonial-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+
+                                  const { data, error: uploadError } = await supabase.storage
+                                    .from('images')
+                                    .upload(fileName, file, { cacheControl: '3600', upsert: false });
+
+                                  if (uploadError) throw uploadError;
+
+                                  const { data: urlData } = supabase.storage.from('images').getPublicUrl(data.path);
+
+                                  const newTestimonials = testimonials.map(t =>
+                                    t.id === testimonial.id ? { ...t, customer_image_url: urlData.publicUrl } : t
+                                  );
+                                  await saveField('testimonials', 'items', newTestimonials);
+                                  setTestimonials(newTestimonials);
+                                } catch (err: any) {
+                                  console.error('Upload error:', err);
+                                  alert('Failed to upload image. Please try again.');
+                                }
+
+                                // Reset input
+                                e.target.value = '';
+                              }}
+                            />
+                            <label
+                              htmlFor={`testimonial-image-${testimonial.id}`}
+                              className="absolute -top-1 -right-1 bg-blue-500 hover:bg-blue-600 text-white p-1.5 rounded-full shadow-lg cursor-pointer transition-colors z-20"
+                              title="Upload customer image"
+                            >
+                              <Upload size={12} />
+                            </label>
+                          </>
+                        )}
                       </div>
                       <div className="flex flex-col min-w-0">
                         {isEditing ? (

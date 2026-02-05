@@ -21,7 +21,7 @@ import { Reservation } from "../../components/Reservation";
 import { FAQ } from "../../components/FAQ";
 import { ChatSupport } from "../../components/ChatSupport";
 import { Payment } from "../../components/Payment";
-import { CartItem, MenuItem } from "../types";
+import { CartItem, MenuItem } from "../../types";
 import { ConditionalSection } from "../components/ConditionalSection";
 import { useWebsite } from "../contexts/WebsiteContext";
 
@@ -99,11 +99,11 @@ export const PublicSite: React.FC = () => {
     setIsCartOpen(true);
   };
 
-  const removeFromCart = (id: number) => {
+  const removeFromCart = (id: string | number) => {
     setCartItems((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const updateQuantity = (id: number, delta: number) => {
+  const updateQuantity = (id: string | number, delta: number) => {
     setCartItems((prev) =>
       prev.map((item) => {
         if (item.id === id) {
@@ -283,7 +283,7 @@ export const PublicSite: React.FC = () => {
           <Testimonials />
         </ConditionalSection>
         <ConditionalSection section="specialOffers">
-          <SpecialOffers />
+          <SpecialOffers addToCart={addToCart} />
         </ConditionalSection>
         <ConditionalSection section="faq">
           <FAQ />
