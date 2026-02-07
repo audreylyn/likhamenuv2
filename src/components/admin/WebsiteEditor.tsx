@@ -564,23 +564,6 @@ export const WebsiteEditor: React.FC = () => {
                       )}
                     </p>
                   </div>
-
-                  {/* Setup Guide Link */}
-                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <p className="text-sm text-blue-800">
-                      <strong>📖 Setup Guide</strong>
-                      <br />
-                      See{" "}
-                      <a
-                        href="/CONTACT_FORM_SETUP.md"
-                        target="_blank"
-                        className="underline hover:text-blue-600"
-                      >
-                        CONTACT_FORM_SETUP.md
-                      </a>{" "}
-                      for step-by-step instructions on setting up Google Apps Script email integration.
-                    </p>
-                  </div>
                 </div>
               )}
             </div>
@@ -626,18 +609,6 @@ export const WebsiteEditor: React.FC = () => {
                     />
                   </div>
 
-                  {/* Gemini Info */}
-                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <p className="text-sm text-blue-800">
-                      <strong>🤖 Using Google Gemini</strong>
-                      <br />
-                      API Key is loaded from{" "}
-                      <code className="bg-white px-1 rounded">
-                        VITE_GEMINI_API_KEY
-                      </code>{" "}
-                      environment variable.
-                    </p>
-                  </div>
 
                   {/* Advanced Config */}
                   <div>
@@ -652,18 +623,6 @@ export const WebsiteEditor: React.FC = () => {
                     />
                   </div>
 
-                  {/* Knowledge Base Info */}
-                  <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-                    <p className="text-sm text-purple-800">
-                      <strong>📚 Knowledge Base</strong>
-                      <br />
-                      Set globally via{" "}
-                      <code className="bg-white px-1 rounded">
-                        VITE_GOOGLE_SHEETS_KB_URL
-                      </code>{" "}
-                      in your .env file.
-                    </p>
-                  </div>
                 </div>
               )}
             </div>
