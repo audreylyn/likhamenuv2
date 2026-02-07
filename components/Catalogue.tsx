@@ -396,11 +396,6 @@ export const Catalogue: React.FC<CatalogueProps> = () => {
                         onClick={handleSeeAllClick}
                         className="flex items-center gap-2 text-bakery-dark/70 font-sans font-medium hover:text-bakery-primary transition-colors cursor-pointer group"
                     >
-                        <span>See all categories</span>
-                        <ArrowRight
-                            size={18}
-                            className="group-hover:translate-x-1 transition-transform"
-                        />
                     </button>
                 </div>
 
@@ -456,12 +451,10 @@ export const Catalogue: React.FC<CatalogueProps> = () => {
 
                                         {/* Badges */}
                                         <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
-                                            {dbProduct?.badges && dbProduct.badges.length > 0 ? (
+                                            {dbProduct?.badges && dbProduct.badges.length > 0 && (
                                                 dbProduct.badges.slice(0, 2).map((badge, idx) => (
                                                     <ProductBadge key={idx} badge={badge} />
                                                 ))
-                                            ) : (
-                                                <ProductBadge badge="Top Pick" />
                                             )}
                                         </div>
 
