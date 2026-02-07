@@ -18,6 +18,8 @@ import { EditableText } from "../src/components/editor/EditableText";
 import { useEditor } from "../src/contexts/EditorContext";
 import { useWebsite } from "../src/contexts/WebsiteContext";
 import { supabase } from "../src/lib/supabase";
+import { ConfirmationModal } from "../src/components/ConfirmationModal";
+import { useToast } from "../src/components/Toast";
 
 // Default hero content
 const DEFAULT_HERO: HeroContent = {
@@ -51,6 +53,8 @@ export const Hero: React.FC = () => {
   const [current, setCurrent] = useState(0);
   const { isEditing, saveField } = useEditor();
   const { websiteData, loading: websiteLoading, contentVersion } = useWebsite();
+  const { showToast } = useToast();
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
 
   // Sync content from websiteData whenever it changes
   useEffect(() => {
@@ -102,12 +106,12 @@ export const Hero: React.FC = () => {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      showToast('Please select an image file', 'warning');
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('Image must be less than 5MB');
+      showToast('Image must be less than 5MB', 'warning');
       return;
     }
 
@@ -130,7 +134,7 @@ export const Hero: React.FC = () => {
       setContent({ ...content!, slides: updatedSlides });
     } catch (error: any) {
       console.error("Error uploading image:", error);
-      alert("Failed to upload image: " + (error.message || 'Unknown error'));
+      showToast("Failed to upload image: " + (error.message || 'Unknown error'), 'error');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -150,7 +154,7 @@ export const Hero: React.FC = () => {
         setContent({ ...content!, slides: updatedSlides });
       } catch (error) {
         console.error("Error saving image:", error);
-        alert("Failed to save image. Please try again.");
+        showToast("Failed to save image. Please try again.", "error");
       }
     }
   };
@@ -185,47 +189,48 @@ export const Hero: React.FC = () => {
       setCurrent(updatedSlides.length - 1);
     } catch (error) {
       console.error("Error adding slide:", error);
-      alert("Failed to add slide. Please try again.");
+      showToast("Failed to add slide. Please try again.", "error");
     }
   };
 
   const handleDeleteSlide = async () => {
     if (!content || slides.length <= 1) {
-      alert("Cannot delete the last slide. You must have at least one slide.");
+      showToast("Cannot delete the last slide. You must have at least one slide.", "warning");
       return;
     }
 
     const slideToDelete = slides[current];
     if (!slideToDelete) return;
 
-    if (
-      !confirm(
-        `Are you sure you want to delete this slide?\n\n"${slideToDelete.title}"`,
-      )
-    ) {
-      return;
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Slide",
+      message: `Are you sure you want to delete this slide? "${slideToDelete.title}"`,
+      onConfirm: async () => {
+        try {
+          const updatedSlides = slides.filter((_, idx) => idx !== current);
 
-    try {
-      const updatedSlides = slides.filter((_, idx) => idx !== current);
+          // Reorder slides to maintain sequential order
+          const reorderedSlides = updatedSlides.map((slide, idx) => ({
+            ...slide,
+            order: idx,
+          }));
 
-      // Reorder slides to maintain sequential order
-      const reorderedSlides = updatedSlides.map((slide, idx) => ({
-        ...slide,
-        order: idx,
-      }));
+          await saveField("hero", "slides", reorderedSlides);
+          setContent({ ...content!, slides: reorderedSlides });
 
-      await saveField("hero", "slides", reorderedSlides);
-      setContent({ ...content!, slides: reorderedSlides });
-
-      // Adjust current index if needed
-      if (current >= updatedSlides.length) {
-        setCurrent(updatedSlides.length - 1);
+          // Adjust current index if needed
+          if (current >= updatedSlides.length) {
+            setCurrent(updatedSlides.length - 1);
+          }
+          setConfirmModal(null);
+        } catch (error) {
+          setConfirmModal(null);
+          console.error("Error deleting slide:", error);
+          showToast("Failed to delete slide. Please try again.", "error");
+        }
       }
-    } catch (error) {
-      console.error("Error deleting slide:", error);
-      alert("Failed to delete slide. Please try again.");
-    }
+    });
   };
 
   if (loading) {
@@ -479,6 +484,14 @@ export const Hero: React.FC = () => {
           ))}
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={!!confirmModal?.isOpen}
+        title={confirmModal?.title}
+        message={confirmModal?.message || ""}
+        onClose={() => setConfirmModal(null)}
+        onConfirm={confirmModal?.onConfirm || (() => { })}
+      />
     </section>
   );
 };

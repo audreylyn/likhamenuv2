@@ -2,8 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Menu, X, Croissant, ShoppingCart, Upload } from "lucide-react";
 import { EditableText } from "../src/components/editor/EditableText";
 import { useEditor } from "../src/contexts/EditorContext";
-import { useWebsite } from "../src/contexts/WebsiteContext";
-
+import { useWebsite } from "../src/contexts/WebsiteContext";import { useToast } from '../src/components/Toast';
 // Default navbar content
 const DEFAULT_NAVBAR = {
   brand_name: "The Golden Crumb",
@@ -36,11 +35,16 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { isEditing, saveField } = useEditor();
-  const { websiteData, loading } = useWebsite();
+  const { websiteData, loading, sectionVisibility } = useWebsite();
+  const { showToast } = useToast();
 
   // Get navbar content from websiteData.content.navbar
   const navbarContent = websiteData?.content?.navbar || DEFAULT_NAVBAR;
   const [localContent, setLocalContent] = useState(navbarContent);
+
+  // Check for Basic Plan - hide navbar if true (except in editor?)
+  // Requirement: "just bring back the navbar, but in basic only the home, menu same goes with quick links"
+  const isBasicPlan = websiteData?.marketing?.plan_id === 'basic';
 
   // Update local content when websiteData changes
   useEffect(() => {
@@ -72,13 +76,13 @@ export const Navbar: React.FC<NavbarProps> = ({
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      showToast('Please select an image file', 'warning');
       return;
     }
 
     // Validate file size (max 2MB for logos)
     if (file.size > 2 * 1024 * 1024) {
-      alert('Logo must be less than 2MB');
+      showToast('Logo must be less than 2MB', 'warning');
       return;
     }
 
@@ -86,7 +90,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
     try {
       const { supabase } = await import('../src/lib/supabase');
-      
+
       // Generate unique filename
       const fileExt = file.name.split('.').pop();
       const fileName = `logo-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
@@ -99,21 +103,21 @@ export const Navbar: React.FC<NavbarProps> = ({
           upsert: false,
         });
 
-      if (uploadError) {
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
       // Get public URL
-      const { data: urlData } = supabase.storage
+      const { data: { publicUrl } } = supabase.storage
         .from('images')
-        .getPublicUrl(data.path);
+        .getPublicUrl(fileName);
 
-      // Save the new URL
-      await saveField("navbar", "brand_logo_url", urlData.publicUrl);
-      setLocalContent({ ...localContent, brand_logo_url: urlData.publicUrl });
-    } catch (error: any) {
-      console.error("Error uploading logo:", error);
-      alert('Failed to upload logo: ' + (error.message || 'Unknown error'));
+      // Save new logo URL
+      if (isEditing) {
+        setLocalContent(prev => ({ ...prev, brand_logo_url: publicUrl }));
+        await saveField('navbar', 'brand_logo_url', publicUrl);
+      }
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      showToast('Failed to upload logo. Please try again.', 'error');
     } finally {
       setIsUploadingLogo(false);
       // Reset file input
@@ -123,9 +127,41 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
+
   const brandName = localContent.brand_name || "";
   const brandLogo = localContent.brand_logo_url;
-  const navItems = localContent.nav_items || DEFAULT_NAVBAR.nav_items;
+
+  // Filter nav items based on section visibility
+  const rawNavItems = localContent.nav_items || DEFAULT_NAVBAR.nav_items;
+  const navItems = rawNavItems.filter((item: any) => {
+    // Basic Plan Logic
+    if (isBasicPlan) {
+      return item.label === "Home" || item.label === "Menu";
+    }
+
+    // If editing, show all items so they can be edited? 
+    // Or reflect actual visibility? Reflecting visibility seems better for WYSIWYG.
+    // However, if user wants to edit a link that is hidden, they might need to see it.
+    // But typically they enable the section first.
+
+    const href = item.href || "";
+    // If external link or not hash link, keep it
+    if (!href.startsWith("#")) return true;
+
+    const section = href.substring(1);
+    // If section visibility is defined, use it. Otherwise (e.g. #unknown), keep it.
+    if (sectionVisibility[section] !== undefined) {
+      return sectionVisibility[section];
+    }
+    return true;
+  }).map((item: any) => {
+    if (isBasicPlan && item.label === "Menu") {
+      return { ...item, href: "#catalogue" }; // Remap Menu to Catalogue for Basic Plan
+    }
+    return item;
+  });
+
+
 
   // Show minimal navbar while loading
   if (loading) {
@@ -250,40 +286,46 @@ export const Navbar: React.FC<NavbarProps> = ({
               );
             })}
 
+
+
             {/* Cart Button */}
-            <button
-              onClick={onOpenCart}
-              className={`flex items-center gap-2 px-5 py-2 rounded-full font-serif transition-all duration-300 shadow-lg group relative ${scrolled
-                ? "bg-bakery-dark text-white hover:bg-bakery-primary"
-                : "bg-white text-bakery-dark hover:bg-bakery-sand"
-                }`}
-            >
-              <ShoppingCart size={20} />
-              <span className="font-bold">Cart</span>
-              {cartItemCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
-                  {cartItemCount}
-                </span>
-              )}
-            </button>
+            {!isBasicPlan && (
+              <button
+                onClick={onOpenCart}
+                className={`flex items-center gap-2 px-5 py-2 rounded-full font-serif transition-all duration-300 shadow-lg group relative ${scrolled
+                  ? "bg-bakery-dark text-white hover:bg-bakery-primary"
+                  : "bg-white text-bakery-dark hover:bg-bakery-sand"
+                  }`}
+              >
+                <ShoppingCart size={20} />
+                <span className="font-bold">Cart</span>
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
+                    {cartItemCount}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center gap-4">
-            <button
-              onClick={onOpenCart}
-              className={`relative p-2 rounded-full transition-colors ${scrolled
-                ? "bg-bakery-dark text-white"
-                : "bg-white text-bakery-dark"
-                }`}
-            >
-              <ShoppingCart size={24} />
-              {cartItemCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
-                  {cartItemCount}
-                </span>
-              )}
-            </button>
+            {!isBasicPlan && (
+              <button
+                onClick={onOpenCart}
+                className={`relative p-2 rounded-full transition-colors ${scrolled
+                  ? "bg-bakery-dark text-white"
+                  : "bg-white text-bakery-dark"
+                  }`}
+              >
+                <ShoppingCart size={24} />
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
+                    {cartItemCount}
+                  </span>
+                )}
+              </button>
+            )}
 
             <button
               onClick={() => setIsOpen(!isOpen)}

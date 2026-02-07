@@ -5,12 +5,14 @@ import type { ContactInfo, ContactFormConfig } from "../src/types/database.types
 import { EditableText } from "../src/components/editor/EditableText";
 import { useEditor } from "../src/contexts/EditorContext";
 import { useWebsite } from "../src/contexts/WebsiteContext";
+import { useToast } from "../src/components/Toast";
 
 export const Contact: React.FC = () => {
   const [content, setContent] = useState<ContactInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const { isEditing, saveField } = useEditor();
   const { websiteData, loading: websiteLoading } = useWebsite();
+  const { showToast } = useToast();
 
   const [formData, setFormData] = useState<ContactFormState>({
     name: "",
@@ -64,7 +66,7 @@ export const Contact: React.FC = () => {
         if (!appsScriptUrl) {
           // If Google Apps Script not configured at all, show error
           console.warn("Contact form not configured. Please set up Google Apps Script integration.");
-          alert("Contact form is not configured. Please contact the website owner.");
+          showToast("Contact form is not configured. Please contact the website owner.", "warning");
           return;
         }
 
@@ -90,7 +92,7 @@ export const Contact: React.FC = () => {
         setTimeout(() => setIsSuccess(false), 5000);
       } catch (error) {
         console.error("Error submitting contact form:", error);
-        alert("Something went wrong. Please try again later.");
+        showToast("Something went wrong. Please try again later.", "error");
       } finally {
         setIsSubmitting(false);
       }

@@ -5,6 +5,8 @@ import { EditableText } from '../src/components/editor/EditableText';
 import { useEditor } from '../src/contexts/EditorContext';
 import { useWebsite } from '../src/contexts/WebsiteContext';
 import { supabase } from '../src/lib/supabase';
+import { ConfirmationModal } from '../src/components/ConfirmationModal';
+import { useToast } from '../src/components/Toast';
 
 export const InstagramFeed: React.FC = () => {
   const [content, setContent] = useState<InstagramFeedConfig | null>(null);
@@ -160,19 +162,21 @@ const InstagramPostCard: React.FC<{
 }> = ({ post, postIndex, posts, content, setContent, isEditing, saveField }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { showToast } = useToast();
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      showToast('Please select an image file', 'warning');
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('Image must be less than 5MB');
+      showToast('Image must be less than 5MB', 'warning');
       return;
     }
 
@@ -196,7 +200,7 @@ const InstagramPostCard: React.FC<{
       setContent({ ...content, feed_items: updatedItems });
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload image. Please try again.');
+      showToast('Failed to upload image. Please try again.', 'error');
     } finally {
       setIsUploading(false);
       setShowMenu(false);
@@ -205,15 +209,23 @@ const InstagramPostCard: React.FC<{
   };
 
   const handleDeletePost = async () => {
-    if (!window.confirm('Delete this Instagram post?')) return;
-    try {
-      const updatedItems = posts.filter((_, i) => i !== postIndex);
-      await saveField('instagramFeed', 'feed_items', updatedItems);
-      setContent({ ...content, feed_items: updatedItems });
-    } catch (error) {
-      console.error('Delete error:', error);
-      alert('Failed to delete post. Please try again.');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Post',
+      message: 'Are you sure you want to delete this Instagram post?',
+      onConfirm: async () => {
+        try {
+          const updatedItems = posts.filter((_, i) => i !== postIndex);
+          await saveField('instagramFeed', 'feed_items', updatedItems);
+          setContent({ ...content, feed_items: updatedItems });
+          setConfirmModal(null);
+        } catch (error) {
+          setConfirmModal(null);
+          console.error('Delete error:', error);
+          showToast('Failed to delete post. Please try again.', 'error');
+        }
+      }
+    });
   };
 
   return (
@@ -300,6 +312,14 @@ const InstagramPostCard: React.FC<{
           </a>
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={!!confirmModal?.isOpen}
+        title={confirmModal?.title}
+        message={confirmModal?.message || ""}
+        onClose={() => setConfirmModal(null)}
+        onConfirm={confirmModal?.onConfirm || (() => { })}
+      />
     </div>
   );
 };
@@ -313,18 +333,19 @@ const AddPostButton: React.FC<{
 }> = ({ posts, content, setContent, saveField }) => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { showToast } = useToast();
 
   const handleAddPost = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      showToast('Please select an image file', 'warning');
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('Image must be less than 5MB');
+      showToast('Image must be less than 5MB', 'warning');
       return;
     }
 
@@ -342,7 +363,6 @@ const AddPostButton: React.FC<{
       const { data: urlData } = supabase.storage.from('images').getPublicUrl(data.path);
 
       const newPost: InstagramFeedItem = {
-        id: Math.random().toString(36).substr(2, 9),
         image_url: urlData.publicUrl,
         post_url: '#',
         caption: '',
@@ -353,7 +373,7 @@ const AddPostButton: React.FC<{
       setContent({ ...content, feed_items: updatedItems });
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to add post. Please try again.');
+      showToast('Failed to add post. Please try again.', 'error');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';

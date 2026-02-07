@@ -6,6 +6,7 @@ import { EditableText } from '../src/components/editor/EditableText';
 import { IconPicker } from '../src/components/editor/IconPicker';
 import { useEditor } from '../src/contexts/EditorContext';
 import { useWebsite } from '../src/contexts/WebsiteContext';
+import { useToast } from '../src/components/Toast';
 
 // Icon mapping - handles both kebab-case and camelCase
 const iconMap: Record<string, any> = {
@@ -54,6 +55,7 @@ export const Reservation: React.FC = () => {
   const [editingIconIndex, setEditingIconIndex] = useState<number | null>(null);
   const { isEditing, saveField } = useEditor();
   const { websiteData, loading: websiteLoading } = useWebsite();
+  const { showToast } = useToast();
 
   const [form, setForm] = useState<ReservationFormState>({
     date: '',
@@ -111,7 +113,7 @@ export const Reservation: React.FC = () => {
       await saveField('reservation', 'features', updatedFeatures);
     } catch (error) {
       console.error('Error updating icon:', error);
-      alert('Failed to save icon. Please try again.');
+      showToast('Failed to save icon. Please try again.', 'error');
       // Revert is tricky without re-fetch, but acceptable for demo
     }
 
@@ -123,7 +125,7 @@ export const Reservation: React.FC = () => {
     e.preventDefault();
     
     if (!facebookMessengerId) {
-      alert("Facebook Messenger is not configured for this store. Please contact us directly.");
+      showToast("Facebook Messenger is not configured for this store. Please contact us directly.", "warning");
       return;
     }
 

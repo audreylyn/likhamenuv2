@@ -16,6 +16,8 @@ import {
   Loader,
   Image as ImageIcon,
 } from "lucide-react";
+import { ConfirmationModal } from "../../components/ConfirmationModal";
+import { useToast } from "../Toast";
 
 interface StorageFile {
   name: string;
@@ -43,6 +45,8 @@ export const Settings: React.FC = () => {
   const [orphanedImages, setOrphanedImages] = useState<StorageFile[]>([]);
   const [scanResult, setScanResult] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     loadStats();
@@ -163,28 +167,33 @@ export const Settings: React.FC = () => {
   };
 
   const deleteOrphans = async () => {
-    if (!window.confirm(`Are you sure you want to delete ${orphanedImages.length} images? This cannot be undone.`)) {
-      return;
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Orphaned Images',
+      message: `Are you sure you want to delete ${orphanedImages.length} images? This cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          setDeleting(true);
+          const fileNames = orphanedImages.map(f => f.name);
 
-    try {
-      setDeleting(true);
-      const fileNames = orphanedImages.map(f => f.name);
+          const { error } = await supabase.storage
+            .from("images")
+            .remove(fileNames);
 
-      const { error } = await supabase.storage
-        .from("images")
-        .remove(fileNames);
+          if (error) throw error;
 
-      if (error) throw error;
-
-      alert("Orphaned images deleted successfully!");
-      setOrphanedImages([]);
-      loadStats(); // Refresh stats
-    } catch (error: any) {
-      alert(`Delete failed: ${error.message}`);
-    } finally {
-      setDeleting(false);
-    }
+          showToast("Orphaned images deleted successfully!", "success");
+          setOrphanedImages([]);
+          loadStats(); // Refresh stats
+          setConfirmModal(null);
+        } catch (error: any) {
+          setConfirmModal(null);
+          showToast(`Delete failed: ${error.message}`, 'error');
+        } finally {
+          setDeleting(false);
+        }
+      }
+    });
   };
 
   if (loading) {
@@ -353,6 +362,13 @@ export const Settings: React.FC = () => {
           )}
         </div>
       </div>
+      <ConfirmationModal
+        isOpen={!!confirmModal?.isOpen}
+        title={confirmModal?.title}
+        message={confirmModal?.message || ""}
+        onClose={() => setConfirmModal(null)}
+        onConfirm={confirmModal?.onConfirm || (() => { })}
+      />
     </div>
   );
 };

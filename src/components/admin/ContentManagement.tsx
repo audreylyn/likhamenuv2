@@ -13,6 +13,7 @@ import {
 } from "../../lib/gemini-ai";
 import { populateWebsiteFromAI } from "../../lib/populate-ai-content";
 import { useWebsite } from "../../contexts/WebsiteContext";
+import { useToast } from "../Toast";
 import {
   ArrowLeft,
   Sparkles,
@@ -25,6 +26,7 @@ export const ContentManagement: React.FC = () => {
   const { websiteId } = useParams();
   const navigate = useNavigate();
   const { refreshContent } = useWebsite();
+  const { showToast } = useToast();
   const [website, setWebsite] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -73,7 +75,7 @@ export const ContentManagement: React.FC = () => {
     e.preventDefault();
 
     if (!aiForm.businessName || !aiForm.businessType) {
-      alert("Please fill in both business name and type");
+      showToast("Please fill in both business name and type", "warning");
       return;
     }
 

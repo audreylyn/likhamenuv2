@@ -34,6 +34,8 @@ import { EditableText } from "../src/components/editor/EditableText";
 import { IconPicker } from "../src/components/editor/IconPicker";
 import { useEditor } from "../src/contexts/EditorContext";
 import { useWebsite } from "../src/contexts/WebsiteContext";
+import { ConfirmationModal } from "../src/components/ConfirmationModal";
+import { useToast } from "../src/components/Toast";
 
 // Icon mapping - handles both kebab-case and camelCase
 const iconMap: Record<string, any> = {
@@ -103,8 +105,10 @@ export const WhyChooseUs: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const [editingIconIndex, setEditingIconIndex] = useState<number | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
   const { isEditing, saveField } = useEditor();
   const { websiteData, loading: websiteLoading, contentVersion } = useWebsite();
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (!websiteLoading) {
@@ -189,23 +193,28 @@ export const WhyChooseUs: React.FC = () => {
             const IconComponent = iconMap[reason.icon] || ChefHat;
 
             const handleDeleteReason = async () => {
-              if (
-                window.confirm("Are you sure you want to delete this reason?")
-              ) {
-                try {
-                  const updatedReasons = reasons.filter((_, i) => i !== index);
-                  await saveField(
-                    "whyChooseUs",
-                    "reasons",
-                    updatedReasons,
-                    content.id,
-                  );
-                  setContent({ ...content, reasons: updatedReasons as any });
-                } catch (error) {
-                  console.error("Error deleting reason:", error);
-                  alert("Failed to delete reason. Please try again.");
+              setConfirmModal({
+                isOpen: true,
+                title: "Delete Reason",
+                message: "Are you sure you want to delete this reason?",
+                onConfirm: async () => {
+                  try {
+                    const updatedReasons = reasons.filter((_, i) => i !== index);
+                    await saveField(
+                      "whyChooseUs",
+                      "reasons",
+                      updatedReasons,
+                      content.id,
+                    );
+                    setContent({ ...content, reasons: updatedReasons as any });
+                    setConfirmModal(null);
+                  } catch (error) {
+                    setConfirmModal(null);
+                    console.error("Error deleting reason:", error);
+                    showToast("Failed to delete reason. Please try again.", "error");
+                  }
                 }
-              }
+              });
             };
 
             return (
@@ -315,7 +324,7 @@ export const WhyChooseUs: React.FC = () => {
                   setContent({ ...content, reasons: updatedReasons as any });
                 } catch (error) {
                   console.error("Error adding reason:", error);
-                  alert("Failed to add reason. Please try again.");
+                  showToast("Failed to add reason. Please try again.", "error");
                 }
               }}
               className="flex flex-col items-center justify-center gap-2 p-10 border-2 border-dashed border-bakery-sand/60 rounded-2xl hover:border-bakery-primary hover:bg-bakery-cream/60 transition-colors text-bakery-text/70 hover:text-bakery-primary bg-bakery-light"
@@ -352,7 +361,7 @@ export const WhyChooseUs: React.FC = () => {
             setContent({ ...content, reasons: updatedReasons as any });
           } catch (error) {
             console.error("Error saving icon:", error);
-            alert("Failed to save icon. Please try again.");
+            showToast("Failed to save icon. Please try again.", "error");
           }
         }}
         currentIcon={
@@ -386,6 +395,14 @@ export const WhyChooseUs: React.FC = () => {
           "ThumbsUp",
           "Smile",
         ]}
+      />
+
+      <ConfirmationModal
+        isOpen={!!confirmModal?.isOpen}
+        title={confirmModal?.title}
+        message={confirmModal?.message || ""}
+        onClose={() => setConfirmModal(null)}
+        onConfirm={confirmModal?.onConfirm || (() => { })}
       />
     </section>
   );

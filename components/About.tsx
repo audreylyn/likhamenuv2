@@ -35,6 +35,8 @@ import { EditableImage } from "../src/components/editor/EditableImage";
 import { IconPicker } from "../src/components/editor/IconPicker";
 import { useEditor } from "../src/contexts/EditorContext";
 import { useWebsite } from "../src/contexts/WebsiteContext";
+import { ConfirmationModal } from "../src/components/ConfirmationModal";
+import { useToast } from "../src/components/Toast";
 
 // Icon mapping - handles both kebab-case and camelCase
 const iconMap: Record<string, any> = {
@@ -107,8 +109,10 @@ export const About: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const [editingIconIndex, setEditingIconIndex] = useState<number | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
   const { isEditing, saveField } = useEditor();
   const { websiteData, loading: websiteLoading, contentVersion } = useWebsite();
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (!websiteLoading) {
@@ -152,7 +156,7 @@ export const About: React.FC = () => {
       setContent({ ...content, features: updatedFeatures as any });
     } catch (error) {
       console.error("Error saving icon:", error);
-      alert("Failed to save icon. Please try again.");
+      showToast("Failed to save icon. Please try again.", "error");
     }
   };
 
@@ -304,30 +308,33 @@ export const About: React.FC = () => {
                 };
 
                 const handleDeleteFeature = async () => {
-                  if (
-                    window.confirm(
-                      "Are you sure you want to delete this feature?",
-                    )
-                  ) {
-                    try {
-                      const updatedFeatures = features.filter(
-                        (_, i) => i !== index,
-                      );
-                      await saveField(
-                        "about",
-                        "features",
-                        updatedFeatures,
-                        content.id,
-                      );
-                      setContent({
-                        ...content,
-                        features: updatedFeatures as any,
-                      });
-                    } catch (error) {
-                      console.error("Error deleting feature:", error);
-                      alert("Failed to delete feature. Please try again.");
+                  setConfirmModal({
+                    isOpen: true,
+                    title: "Delete Feature",
+                    message: "Are you sure you want to delete this feature?",
+                    onConfirm: async () => {
+                      try {
+                        const updatedFeatures = features.filter(
+                          (_, i) => i !== index,
+                        );
+                        await saveField(
+                          "about",
+                          "features",
+                          updatedFeatures,
+                          content.id,
+                        );
+                        setContent({
+                          ...content,
+                          features: updatedFeatures as any,
+                        });
+                        setConfirmModal(null);
+                      } catch (error) {
+                        setConfirmModal(null);
+                        console.error("Error deleting feature:", error);
+                        showToast("Failed to delete feature. Please try again.", "error");
+                      }
                     }
-                  }
+                  });
                 };
 
                 return (
@@ -429,7 +436,7 @@ export const About: React.FC = () => {
                       });
                     } catch (error) {
                       console.error("Error adding feature:", error);
-                      alert("Failed to add feature. Please try again.");
+                      showToast("Failed to add feature. Please try again.", "error");
                     }
                   }}
                   className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-gray-500 hover:text-blue-600"
@@ -444,7 +451,6 @@ export const About: React.FC = () => {
         </div>
       </div>
 
-      {/* Icon Picker Modal */}
       <IconPicker
         isOpen={iconPickerOpen}
         onClose={() => {
@@ -485,6 +491,14 @@ export const About: React.FC = () => {
           "ThumbsUp",
           "Smile",
         ]}
+      />
+
+      <ConfirmationModal
+        isOpen={!!confirmModal?.isOpen}
+        title={confirmModal?.title}
+        message={confirmModal?.message || ""}
+        onClose={() => setConfirmModal(null)}
+        onConfirm={confirmModal?.onConfirm || (() => { })}
       />
     </section>
   );

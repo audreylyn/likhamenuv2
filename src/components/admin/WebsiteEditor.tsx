@@ -21,6 +21,8 @@ import {
 import { populateDefaultContent } from "../../lib/default-content";
 
 import { DEFAULT_THEMES } from "../../lib/themes";
+import { ConfirmationModal } from "../../components/ConfirmationModal";
+import { useToast } from "../Toast";
 
 export const WebsiteEditor: React.FC = () => {
   const { websiteId } = useParams();
@@ -30,6 +32,8 @@ export const WebsiteEditor: React.FC = () => {
   const [populating, setPopulating] = useState(false);
   const [website, setWebsite] = useState<any>(null);
   const [hasEmptyContent, setHasEmptyContent] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
+  const { showToast } = useToast();
 
   // Password protection state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -77,24 +81,24 @@ export const WebsiteEditor: React.FC = () => {
       setWebsite(websiteData);
 
       // Store password for verification
-      setStoredPassword(websiteData.password || null);
+      setStoredPassword(websiteData?.password || null);
 
       // Auto-authenticate for admin users (no password prompt in admin panel)
       setIsAuthenticated(true);
 
       // Check if content is empty (no sections initialized)
-      const content = websiteData.content || {};
+      const content = websiteData?.content || {};
       const contentKeys = Object.keys(content).filter(
         (k) => k !== "chatSupport",
       );
       setHasEmptyContent(contentKeys.length === 0);
 
       // Populate form from website data
-      setTitle(websiteData.title || "");
-      setSubdomain(websiteData.subdomain || "");
+      setTitle(websiteData?.title || "");
+      setSubdomain(websiteData?.subdomain || "");
 
       // Theme from theme JSONB
-      const theme = websiteData.theme || {};
+      const theme = websiteData?.theme || {};
       setSelectedTheme(theme.preset || "warm-bakery");
 
       // Chat support from content.chatSupport JSONB
@@ -115,11 +119,11 @@ export const WebsiteEditor: React.FC = () => {
       );
 
       // Messenger from messenger JSONB
-      const messenger = websiteData.messenger || {};
+      const messenger = websiteData?.messenger || {};
       setMessengerPageId(messenger.page_id || "");
 
       // Contact form config from contactformconfig JSONB
-      const contactFormConfig = websiteData.contactformconfig || {};
+      const contactFormConfig = websiteData?.contactformconfig || {};
       setContactFormEnabled(contactFormConfig.enabled || false);
       setContactFormAppsScriptUrl(
         contactFormConfig.appsScriptUrl ||
@@ -137,25 +141,30 @@ export const WebsiteEditor: React.FC = () => {
   const handlePopulateContent = async () => {
     if (!websiteId) return;
 
-    const confirmed = window.confirm(
-      "This will populate your website with sample content. You can edit all content later. Continue?",
-    );
-    if (!confirmed) return;
-
-    setPopulating(true);
-    try {
-      await populateDefaultContent(websiteId);
-      setHasEmptyContent(false);
-      alert(
-        "Sample content added successfully! You can now view and edit your website.",
-      );
-      // Reload website data
-      await loadData();
-    } catch (error: any) {
-      alert(`Error: ${error.message}`);
-    } finally {
-      setPopulating(false);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Populate Content',
+      message: "This will populate your website with sample content. You can edit all content later. Continue?",
+      onConfirm: async () => {
+        setPopulating(true);
+        try {
+          await populateDefaultContent(websiteId);
+          setHasEmptyContent(false);
+          showToast(
+            "Sample content added successfully! You can now view and edit your website.",
+            "success"
+          );
+          // Reload website data
+          await loadData();
+          setConfirmModal(null);
+        } catch (error: any) {
+          setConfirmModal(null);
+          showToast(`Error: ${error.message}`, 'error');
+        } finally {
+          setPopulating(false);
+        }
+      }
+    });
   };
 
   const handleSave = async () => {
@@ -202,8 +211,8 @@ export const WebsiteEditor: React.FC = () => {
       };
 
       // Update website with all JSONB data
-      const { error: websiteError } = await supabase
-        .from("websites")
+      const { error: websiteError } = await (supabase
+        .from("websites") as any)
         .update({
           title: title,
           subdomain: subdomain,
@@ -222,9 +231,9 @@ export const WebsiteEditor: React.FC = () => {
         localStorage.removeItem(`likhamenu_website_${subdomain}`);
       }
 
-      alert("Website updated successfully!");
+      showToast("Website updated successfully!", "success");
     } catch (error: any) {
-      alert(`Error: ${error.message}`);
+      showToast(`Error: ${error.message}`, 'error');
     } finally {
       setSaving(false);
     }
@@ -433,8 +442,8 @@ export const WebsiteEditor: React.FC = () => {
                 key={theme.id}
                 onClick={() => setSelectedTheme(theme.id)}
                 className={`p-4 rounded-lg border-2 transition text-left ${selectedTheme === theme.id
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-gray-300"
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-200 hover:border-gray-300"
                   }`}
               >
                 <div className="flex items-center justify-between mb-2">
@@ -535,12 +544,12 @@ export const WebsiteEditor: React.FC = () => {
 
                   {/* Status Indicator */}
                   <div className={`p-3 rounded-lg border ${contactFormClientId
-                      ? "bg-green-50 border-green-200"
-                      : "bg-yellow-50 border-yellow-200"
+                    ? "bg-green-50 border-green-200"
+                    : "bg-yellow-50 border-yellow-200"
                     }`}>
                     <p className={`text-sm ${contactFormClientId
-                        ? "text-green-800"
-                        : "text-yellow-800"
+                      ? "text-green-800"
+                      : "text-yellow-800"
                       }`}>
                       {contactFormClientId ? (
                         <>
@@ -682,6 +691,13 @@ export const WebsiteEditor: React.FC = () => {
           </button>
         </div>
       </div>
+      <ConfirmationModal
+        isOpen={!!confirmModal?.isOpen}
+        title={confirmModal?.title}
+        message={confirmModal?.message || ""}
+        onClose={() => setConfirmModal(null)}
+        onConfirm={confirmModal?.onConfirm || (() => { })}
+      />
     </div>
   );
 };

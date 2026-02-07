@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { buildWebsiteUrl } from "../../lib/website-detector";
 import { initializeWebsiteContent } from "../../lib/initialize-website-content";
+import { ConfirmationModal } from "../../components/ConfirmationModal";
+import { useToast } from "../Toast";
 
 interface Website {
   id: string;
@@ -87,8 +89,11 @@ export const WebsiteList: React.FC = () => {
   });
 
   // Show/hide password states
+
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showModalPassword, setShowModalPassword] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
+  const { showToast } = useToast();
 
   // Default enabled sections based on Basic Plan
   const [enabledSections, setEnabledSections] = useState<Set<string>>(
@@ -197,9 +202,9 @@ export const WebsiteList: React.FC = () => {
       }
 
       if (contentInitialized) {
-        alert("Website created successfully with sample content!");
+        showToast("Website created successfully with sample content!", "success");
       } else {
-        alert("Website created! Note: Could not auto-populate content - you may need to add content manually or ensure a 'golden-crumb' template website exists.");
+        showToast("Website created! Note: Could not auto-populate content - you may need to add content manually or ensure a 'golden-crumb' template website exists.", "warning");
       }
       setNewWebsite({
         title: "",
@@ -211,7 +216,7 @@ export const WebsiteList: React.FC = () => {
       setEnabledSections(new Set(PLANS.find(p => p.id === "basic")?.sections || []));
       loadWebsites();
     } catch (error: any) {
-      alert(`Error: ${error.message}`);
+      showToast(`Error: ${error.message}`, 'error');
     } finally {
       setCreating(false);
     }
@@ -234,27 +239,27 @@ export const WebsiteList: React.FC = () => {
       await loadWebsites();
     } catch (error: any) {
       console.error("Error toggling website status:", error);
-      alert(`Error: ${error.message}`);
+      showToast(`Error: ${error.message}`, 'error');
     }
   };
 
   const handleDelete = async (id: string, subdomain: string) => {
-    if (
-      !window.confirm(
-        `Are you sure you want to delete "${subdomain}"? This cannot be undone.`,
-      )
-    ) {
-      return;
-    }
-
-    try {
-      const { error } = await supabase.from("websites").delete().eq("id", id);
-
-      if (error) throw error;
-      await loadWebsites();
-    } catch (error: any) {
-      alert(`Error: ${error.message}`);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Website',
+      message: `Are you sure you want to delete "${subdomain}"? This cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          const { error } = await supabase.from("websites").delete().eq("id", id);
+          if (error) throw error;
+          await loadWebsites();
+          setConfirmModal(null);
+        } catch (error: any) {
+          setConfirmModal(null);
+          showToast(`Error: ${error.message}`, 'error');
+        }
+      }
+    });
   };
 
   if (loading) {
@@ -684,6 +689,13 @@ export const WebsiteList: React.FC = () => {
           </div>
         </div>
       )}
+      <ConfirmationModal
+        isOpen={!!confirmModal?.isOpen}
+        title={confirmModal?.title}
+        message={confirmModal?.message || ""}
+        onClose={() => setConfirmModal(null)}
+        onConfirm={confirmModal?.onConfirm || (() => { })}
+      />
     </div>
   );
 };

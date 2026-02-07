@@ -13,11 +13,13 @@ import { FloatingToolbar } from '../components/editor/FloatingToolbar';
 import { PublicSite } from './PublicSite';
 import { supabase } from '../lib/supabase';
 import { Lock, Eye, EyeOff } from 'lucide-react';
+import { useToast } from '../components/Toast';
 
 const EditorContent: React.FC = () => {
   const { user } = useAuth();
   const { websiteData, loading, currentWebsite, refreshContent } = useWebsite();
   const { isEditing, setIsEditing, hasChanges, setHasChanges } = useEditor();
+  const { showToast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
 
   // Password protection state
@@ -116,14 +118,14 @@ const EditorContent: React.FC = () => {
 
       if (error) {
         console.error('❌ Publish failed:', error);
-        alert(`Failed to publish: ${error.message}`);
+        showToast(`Failed to publish: ${error.message}`, 'error');
         return;
       }
 
       // Force fresh content + clear cache
       refreshContent();
       setHasChanges(false);
-      alert('Changes published successfully!');
+      showToast('Changes published successfully!', 'success');
     } finally {
       setIsSaving(false);
     }

@@ -3,6 +3,7 @@ import { X, Trash2, Plus, Minus, Send, ShoppingCart } from 'lucide-react';
 import { CartItem } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWebsite } from '../src/contexts/WebsiteContext';
+import { useToast } from '../src/components/Toast';
 
 interface CartProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ export const Cart: React.FC<CartProps> = ({
   const [facebookMessengerId, setFacebookMessengerId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { websiteData } = useWebsite();
+  const { showToast } = useToast();
 
   const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
@@ -74,7 +76,7 @@ export const Cart: React.FC<CartProps> = ({
     
     if (!facebookMessengerId || items.length === 0) {
       if (!facebookMessengerId) {
-        alert("Facebook Messenger is not configured for this store.");
+        showToast("Facebook Messenger is not configured for this store.", "warning");
       }
       return;
     }

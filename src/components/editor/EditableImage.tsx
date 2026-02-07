@@ -7,6 +7,7 @@ import React, { useState, useRef } from 'react';
 import { useEditor } from '../../contexts/EditorContext';
 import { Upload, X, Loader2, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { ConfirmationModal } from '../../components/ConfirmationModal';
 
 interface EditableImageProps {
   src: string;
@@ -33,6 +34,7 @@ export const EditableImage: React.FC<EditableImageProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showOptions, setShowOptions] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -99,19 +101,26 @@ export const EditableImage: React.FC<EditableImageProps> = ({
     }
   };
 
-  const handleRemoveImage = async () => {
-    if (!window.confirm('Remove this image?')) return;
-
-    try {
-      setIsUploading(true);
-      await onSave('');
-      setShowOptions(false);
-    } catch (err: any) {
-      console.error('Remove error:', err);
-      setError(err.message || 'Failed to remove image');
-    } finally {
-      setIsUploading(false);
-    }
+  const handleRemoveImage = () => {
+    setShowOptions(false);
+    setConfirmModal({
+      isOpen: true,
+      title: 'Remove Image',
+      message: 'Are you sure you want to remove this image?',
+      onConfirm: async () => {
+        try {
+          setIsUploading(true);
+          await onSave('');
+          setConfirmModal(null);
+        } catch (err: any) {
+          setConfirmModal(null);
+          console.error('Remove error:', err);
+          setError(err.message || 'Failed to remove image');
+        } finally {
+          setIsUploading(false);
+        }
+      }
+    });
   };
 
   // Non-editing mode - just display the image
@@ -173,7 +182,7 @@ export const EditableImage: React.FC<EditableImageProps> = ({
 
       {/* Options menu - uses fixed positioning to escape overflow:hidden */}
       {showOptions && !isUploading && (
-        <div 
+        <div
           className="fixed bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-[9999]"
           style={{ top: menuPosition.top, left: menuPosition.left }}
         >
@@ -226,6 +235,13 @@ export const EditableImage: React.FC<EditableImageProps> = ({
           }}
         />
       )}
+      <ConfirmationModal
+        isOpen={!!confirmModal?.isOpen}
+        title={confirmModal?.title}
+        message={confirmModal?.message || ""}
+        onClose={() => setConfirmModal(null)}
+        onConfirm={confirmModal?.onConfirm || (() => { })}
+      />
     </div>
   );
 };

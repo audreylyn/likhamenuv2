@@ -5,14 +5,18 @@ import type { FAQ as FAQType, FAQConfig } from '../src/types/database.types';
 import { EditableText } from '../src/components/editor/EditableText';
 import { useEditor } from '../src/contexts/EditorContext';
 import { useWebsite } from '../src/contexts/WebsiteContext';
+import { ConfirmationModal } from '../src/components/ConfirmationModal';
+import { useToast } from '../src/components/Toast';
 
 export const FAQ: React.FC = () => {
   const [config, setConfig] = useState<FAQConfig | null>(null);
   const [faqs, setFaqs] = useState<FAQType[]>([]);
   const [loading, setLoading] = useState(true);
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
   const { isEditing, saveField } = useEditor();
   const { websiteData, loading: websiteLoading } = useWebsite();
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (!websiteLoading && websiteData?.content?.faq) {
@@ -86,7 +90,7 @@ export const FAQ: React.FC = () => {
                 className="text-bakery-text/80 mt-2"
               />
             ) : (
-                <p className="text-bakery-text/80 mt-2">{config.subheading}</p>
+              <p className="text-bakery-text/80 mt-2">{config.subheading}</p>
             )
           )}
           <div className="w-16 h-1 bg-bakery-sand mx-auto rounded-full mt-4" />
@@ -95,16 +99,23 @@ export const FAQ: React.FC = () => {
         <div className="space-y-4">
           {faqs.map((faq, index) => {
             const handleDeleteFAQ = async () => {
-              if (window.confirm('Are you sure you want to delete this FAQ?')) {
-                try {
-                  const newFaqs = faqs.filter(f => f.id !== faq.id);
-                  await saveField('faq', 'items', newFaqs);
-                  setFaqs(newFaqs);
-                } catch (error) {
-                  console.error('Error deleting FAQ:', error);
-                  alert('Failed to delete FAQ. Please try again.');
+              setConfirmModal({
+                isOpen: true,
+                title: 'Delete FAQ',
+                message: 'Are you sure you want to delete this FAQ?',
+                onConfirm: async () => {
+                  try {
+                    const newFaqs = faqs.filter(f => f.id !== faq.id);
+                    await saveField('faq', 'items', newFaqs);
+                    setFaqs(newFaqs);
+                    setConfirmModal(null);
+                  } catch (error) {
+                    setConfirmModal(null);
+                    console.error('Error deleting FAQ:', error);
+                    showToast('Failed to delete FAQ. Please try again.', 'error');
+                  }
                 }
-              }
+              });
             };
 
             return (
@@ -207,7 +218,7 @@ export const FAQ: React.FC = () => {
                   setFaqs(newFaqs);
                 } catch (error) {
                   console.error('Error adding FAQ:', error);
-                  alert('Failed to add FAQ. Please try again.');
+                  showToast('Failed to add FAQ. Please try again.', 'error');
                 }
               }}
               className="w-full flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-bakery-sand/60 rounded-xl hover:border-bakery-primary hover:bg-bakery-cream/60 transition-colors text-bakery-text/70 hover:text-bakery-primary bg-bakery-light"
@@ -219,6 +230,14 @@ export const FAQ: React.FC = () => {
           )}
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={!!confirmModal?.isOpen}
+        title={confirmModal?.title}
+        message={confirmModal?.message || ""}
+        onClose={() => setConfirmModal(null)}
+        onConfirm={confirmModal?.onConfirm || (() => { })}
+      />
     </section>
   );
 };

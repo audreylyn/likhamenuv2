@@ -6,6 +6,8 @@ import { EditableText } from '../src/components/editor/EditableText';
 import { useEditor } from '../src/contexts/EditorContext';
 import { useWebsite } from '../src/contexts/WebsiteContext';
 import { supabase } from '../src/lib/supabase';
+import { ConfirmationModal } from '../src/components/ConfirmationModal';
+import { useToast } from '../src/components/Toast';
 
 export const Testimonials: React.FC = () => {
   const [config, setConfig] = useState<TestimonialsConfig | null>(null);
@@ -13,8 +15,10 @@ export const Testimonials: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
   const [visibleCards, setVisibleCards] = useState(3);
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
   const { isEditing, saveField } = useEditor();
   const { websiteData, loading: websiteLoading } = useWebsite();
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (!websiteLoading && websiteData?.content?.testimonials) {
@@ -67,16 +71,23 @@ export const Testimonials: React.FC = () => {
   };
 
   const handleDeleteTestimonial = async (testimonialId: string) => {
-    if (window.confirm('Are you sure you want to delete this testimonial?')) {
-      try {
-        const newTestimonials = testimonials.filter(t => t.id !== testimonialId);
-        await saveField('testimonials', 'items', newTestimonials);
-        setTestimonials(newTestimonials);
-      } catch (error) {
-        console.error('Error deleting testimonial:', error);
-        alert('Failed to delete testimonial. Please try again.');
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Testimonial',
+      message: 'Are you sure you want to delete this testimonial?',
+      onConfirm: async () => {
+        try {
+          const newTestimonials = testimonials.filter(t => t.id !== testimonialId);
+          await saveField('testimonials', 'items', newTestimonials);
+          setTestimonials(newTestimonials);
+          setConfirmModal(null);
+        } catch (error) {
+          setConfirmModal(null);
+          console.error('Error deleting testimonial:', error);
+          showToast('Failed to delete testimonial. Please try again.', 'error');
+        }
       }
-    }
+    });
   };
 
   const handleAddTestimonial = async () => {
@@ -104,7 +115,7 @@ export const Testimonials: React.FC = () => {
       setTestimonials(newTestimonials);
     } catch (error) {
       console.error('Error adding testimonial:', error);
-      alert('Failed to add testimonial. Please try again.');
+      showToast('Failed to add testimonial. Please try again.', 'error');
     }
   };
 
@@ -238,12 +249,12 @@ export const Testimonials: React.FC = () => {
                                 if (!file) return;
 
                                 if (!file.type.startsWith('image/')) {
-                                  alert('Please select an image file');
+                                  showToast('Please select an image file', 'warning');
                                   return;
                                 }
 
                                 if (file.size > 5 * 1024 * 1024) {
-                                  alert('Image must be less than 5MB');
+                                  showToast('Image must be less than 5MB', 'warning');
                                   return;
                                 }
 
@@ -266,7 +277,7 @@ export const Testimonials: React.FC = () => {
                                   setTestimonials(newTestimonials);
                                 } catch (err: any) {
                                   console.error('Upload error:', err);
-                                  alert('Failed to upload image. Please try again.');
+                                  showToast('Failed to upload image. Please try again.', 'error');
                                 }
 
                                 // Reset input
@@ -375,6 +386,14 @@ export const Testimonials: React.FC = () => {
           </div>
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={!!confirmModal?.isOpen}
+        title={confirmModal?.title}
+        message={confirmModal?.message || ""}
+        onClose={() => setConfirmModal(null)}
+        onConfirm={confirmModal?.onConfirm || (() => { })}
+      />
     </section>
   );
 };

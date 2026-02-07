@@ -5,6 +5,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useEditor } from '../../contexts/EditorContext';
+import { useToast } from '../Toast';
 
 interface EditableTextProps {
   value: string;
@@ -24,6 +25,7 @@ export const EditableText: React.FC<EditableTextProps> = ({
   multiline = false,
 }) => {
   const { isEditing } = useEditor();
+  const { showToast } = useToast();
   const [isEditingText, setIsEditingText] = useState(false);
   const [editValue, setEditValue] = useState(value);
   const [isSaving, setIsSaving] = useState(false);
@@ -59,7 +61,7 @@ export const EditableText: React.FC<EditableTextProps> = ({
         console.error('Error saving text:', error);
         // Revert to original value on error
         setEditValue(value);
-        alert('Failed to save changes. Please try again.');
+        showToast('Failed to save changes. Please try again.', 'error');
       } finally {
         setIsSaving(false);
         setIsEditingText(false);

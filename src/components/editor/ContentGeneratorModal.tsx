@@ -8,6 +8,7 @@ import { X, Sparkles, Loader, CheckCircle, AlertCircle } from 'lucide-react';
 import { generateWebsiteContent, type AIContentRequest } from '../../lib/gemini-ai';
 import { populateWebsiteFromAI } from '../../lib/populate-ai-content';
 import { useWebsite } from '../../contexts/WebsiteContext';
+import { useToast } from '../Toast';
 
 interface ContentGeneratorModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export const ContentGeneratorModal: React.FC<ContentGeneratorModalProps> = ({
   websiteTitle,
 }) => {
   const { refreshContent } = useWebsite();
+  const { showToast } = useToast();
   const [generating, setGenerating] = useState(false);
   const [aiForm, setAiForm] = useState<AIContentRequest>({
     businessName: websiteTitle || '',
@@ -39,7 +41,7 @@ export const ContentGeneratorModal: React.FC<ContentGeneratorModalProps> = ({
     e.preventDefault();
     
     if (!aiForm.businessName || !aiForm.businessType) {
-      alert('Please fill in both business name and type');
+      showToast('Please fill in both business name and type', 'warning');
       return;
     }
 

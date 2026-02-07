@@ -12,6 +12,7 @@ import React, {
   useRef,
 } from "react";
 import { useWebsite } from "./WebsiteContext";
+import { useToast } from "../components/Toast";
 
 import { supabase } from "../lib/supabase";
 
@@ -38,6 +39,7 @@ export const EditorProvider: React.FC<{
   const [isEditing, setIsEditing] = useState(initialEditing);
   const [hasChanges, setHasChanges] = useState(false);
   const { refreshContent, currentWebsite } = useWebsite();
+  const { showToast } = useToast();
 
   // ... refs ...
 
@@ -93,7 +95,7 @@ export const EditorProvider: React.FC<{
 
         if (updateError) {
           console.error(`❌ Error saving ${section}.${field}:`, updateError);
-          alert(`Failed to save changes: ${updateError.message}`);
+          showToast(`Failed to save changes: ${updateError.message}`, 'error');
           throw updateError;
         }
 
@@ -149,7 +151,7 @@ export const EditorProvider: React.FC<{
 
         if (updateError) {
           console.error(`❌ Error saving ${section}:`, updateError);
-          alert(`Failed to save changes: ${updateError.message}`);
+          showToast(`Failed to save changes: ${updateError.message}`, 'error');
           throw updateError;
         }
 

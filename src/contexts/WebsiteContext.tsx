@@ -107,6 +107,8 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
       "instagramFeed",
       "footer",
       "chatSupport",
+      "payment",
+      "catalogue",
     ];
 
     const visibility: Record<string, boolean> = {};
@@ -147,7 +149,7 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
       // Clear cache and always fetch fresh data
       localStorage.removeItem(CACHE_KEY_PREFIX + subdomain);
       console.log("[WebsiteContext] Fetching fresh data for", subdomain);
-      
+
       // Fetch from network
       await fetchWebsite(subdomain, hostname, allowDraft);
     } catch (error) {
@@ -177,7 +179,7 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // Use cache: 'reload' to prevent browser caching while keeping the URL clean for PostgREST
       const response = await fetch(
-        `${supabaseUrl}/rest/v1/websites?subdomain=eq.${subdomain}${statusFilter}&select=id,title,subdomain,status,theme,content,enabledsections,messenger,contactformconfig`,
+        `${supabaseUrl}/rest/v1/websites?subdomain=eq.${subdomain}${statusFilter}&select=id,title,subdomain,status,theme,content,enabledsections,messenger,contactformconfig,marketing`,
         {
           cache: 'reload',
           headers: {
@@ -254,7 +256,7 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
       const { data: website, error } = await supabase
         .from("websites")
         .select(
-          "id, title, subdomain, status, theme, content, enabledsections, messenger, contactformconfig",
+          "id, title, subdomain, status, theme, content, enabledsections, messenger, contactformconfig, marketing",
         )
         .eq("id", websiteId)
         .single();

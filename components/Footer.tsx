@@ -13,6 +13,8 @@ import {
 import { EditableText } from "../src/components/editor/EditableText";
 import { useEditor } from "../src/contexts/EditorContext";
 import { useWebsite } from "../src/contexts/WebsiteContext";
+import { ConfirmationModal } from "../src/components/ConfirmationModal";
+import { useToast } from "../src/components/Toast";
 import type { FooterContent } from "../src/types/database.types";
 
 interface SocialLink {
@@ -34,8 +36,10 @@ export const Footer: React.FC = () => {
   const [copyrightText, setCopyrightText] = useState("");
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
   const [footerContent, setFooterContent] = useState<FooterContent | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
   const { isEditing, saveField } = useEditor();
-  const { websiteData, loading: websiteLoading, contentVersion } = useWebsite();
+  const { websiteData, loading: websiteLoading, contentVersion, sectionVisibility } = useWebsite();
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (!websiteLoading) {
@@ -113,10 +117,48 @@ export const Footer: React.FC = () => {
     }
   };
 
+  // Helper to check if a quick link should be shown
+  const isSectionVisible = (sectionId: string) => {
+    // If sectionVisibility is not yet populated (loading), default to true or wait?
+    // Usually it defaults to visible if empty logic implies enabledSections=[] means all enabled.
+    // Our logic: enabledSections.length === 0 || enabledSections.includes(section)
+    if (sectionVisibility[sectionId] !== undefined) {
+      return sectionVisibility[sectionId];
+    }
+    return true; // Default to true if unknown
+  };
+
+  const quickLinks = [
+    { label: "Home", href: "#hero" },
+    { label: "Menu", href: "#menu" },
+    { label: "About Us", href: "#about" },
+    { label: "Contact", href: "#contact" },
+  ];
+
+  // Requirement: "just bring back the navbar, but in basic only the home, menu same goes with quick links"
+  const isBasicPlan = websiteData?.marketing?.plan_id === 'basic';
+
+  const displayedQuickLinks = quickLinks.filter(link => {
+    if (isBasicPlan) {
+      return link.label === "Home" || link.label === "Menu";
+    }
+    const sectionId = link.href.replace('#', '');
+    return isSectionVisible(sectionId);
+  }).map(link => {
+    if (isBasicPlan && link.label === "Menu") {
+      return { ...link, href: "#catalogue" };
+    }
+    return link;
+  });
+
+
+
   // Don't render footer until data is loaded to prevent flash
   if (loading && !brandName) {
     return null; // Or a loading spinner
   }
+
+
 
   return (
     <footer className="bg-bakery-dark text-bakery-beige pt-16 pb-8">
@@ -179,42 +221,17 @@ export const Footer: React.FC = () => {
               </h4>
             )}
             <ul className="space-y-3 font-sans">
-              <li>
-                <a
-                  href={isEditing ? "#" : "#hero"}
-                  onClick={isEditing ? (e) => e.preventDefault() : undefined}
-                  className="hover:text-white transition-colors"
-                >
-                  Home
-                </a>
-              </li>
-              <li>
-                <a
-                  href={isEditing ? "#" : "#menu"}
-                  onClick={isEditing ? (e) => e.preventDefault() : undefined}
-                  className="hover:text-white transition-colors"
-                >
-                  Menu
-                </a>
-              </li>
-              <li>
-                <a
-                  href={isEditing ? "#" : "#about"}
-                  onClick={isEditing ? (e) => e.preventDefault() : undefined}
-                  className="hover:text-white transition-colors"
-                >
-                  About Us
-                </a>
-              </li>
-              <li>
-                <a
-                  href={isEditing ? "#" : "#contact"}
-                  onClick={isEditing ? (e) => e.preventDefault() : undefined}
-                  className="hover:text-white transition-colors"
-                >
-                  Contact
-                </a>
-              </li>
+              {displayedQuickLinks.map((link, index) => (
+                <li key={index}>
+                  <a
+                    href={isEditing ? "#" : link.href}
+                    onClick={isEditing ? (e) => e.preventDefault() : undefined}
+                    className="hover:text-white transition-colors"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -260,29 +277,32 @@ export const Footer: React.FC = () => {
                     {isEditing && (
                       <button
                         onClick={() => {
-                          if (window.confirm(`Delete ${link.platform} link?`)) {
-                            const newLinks = socialLinks.filter(
-                              (l) => l.id !== link.id,
-                            );
-                            setSocialLinks(newLinks);
-                            // Update core contact social links
-                            const updatedSocials = { ...websiteData?.content?.contact?.social_links };
-                            // Remove empty/deleted key
-                            // Mapping platform name to key:
-                            const key = link.platform.toLowerCase();
-                            // This is tricky because UI list != fixed schema keys (instagram, facebook, twitter, linkedin, youtube).
-                            // If it's a dynamic list, we might have issues sync back to fixed keys.
-                            // But original code:
-                            /*
-                              if (socials.instagram) links.push(...)
-                              if (socials.facebook) ...
-                            */
-                            // So we should only support deleting/updating known keys.
-                            if (['instagram', 'facebook', 'twitter', 'linkedin', 'youtube'].includes(key)) {
-                              updatedSocials[key] = null; // or empty string?
-                              saveField('contact', 'social_links', updatedSocials);
+                          setConfirmModal({
+                            isOpen: true,
+                            title: `Delete ${link.platform} link?`,
+                            message: `Are you sure you want to delete the ${link.platform} link?`,
+                            onConfirm: async () => {
+                              try {
+                                const newLinks = socialLinks.filter(
+                                  (l) => l.id !== link.id,
+                                );
+                                setSocialLinks(newLinks);
+                                // Update core contact social links
+                                const updatedSocials = { ...websiteData?.content?.contact?.social_links };
+
+                                const key = link.platform.toLowerCase();
+                                if (['instagram', 'facebook', 'twitter', 'linkedin', 'youtube'].includes(key)) {
+                                  updatedSocials[key] = null;
+                                  await saveField('contact', 'social_links', updatedSocials);
+                                }
+                                setConfirmModal(null);
+                              } catch (error) {
+                                setConfirmModal(null);
+                                console.error('Error deleting social link:', error);
+                                showToast('Failed to delete social link. Please try again.', 'error');
+                              }
                             }
-                          }
+                          });
                         }}
                         className="absolute -top-2 -right-2 z-10 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors shadow-lg opacity-0 group-hover:opacity-100"
                         title="Delete social link"
@@ -371,7 +391,7 @@ export const Footer: React.FC = () => {
                         key = 'youtube';
                       } else {
                         // Not supported in strict schema?
-                        alert("Only Instagram, Facebook, Twitter, LinkedIn, and YouTube are supported currently.");
+                        showToast("Only Instagram, Facebook, Twitter, LinkedIn, and YouTube are supported currently.", "warning");
                         return;
                       }
 
@@ -444,6 +464,14 @@ export const Footer: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={!!confirmModal?.isOpen}
+        title={confirmModal?.title}
+        message={confirmModal?.message || ""}
+        onClose={() => setConfirmModal(null)}
+        onConfirm={confirmModal?.onConfirm || (() => { })}
+      />
     </footer>
   );
 };

@@ -8,6 +8,7 @@ import React, { Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./src/contexts/AuthContext";
 import { WebsiteProvider } from "./src/contexts/WebsiteContext";
+import { ToastProvider } from "./src/components/Toast";
 import { RequireAuth, RequireAdmin } from "./src/components/ProtectedRoute";
 import { WebsiteSelector } from "./src/components/WebsiteSelector";
 import { getCurrentMode } from "./src/lib/website-detector";
@@ -169,6 +170,7 @@ const EditorRoute: React.FC = () => {
 function App() {
   return (
     <BrowserRouter>
+      <ToastProvider>
       <AuthProvider>
         <Routes>
           {/* Root Route - Shows PublicSite if subdomain detected, otherwise Login */}
@@ -225,6 +227,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
+      </ToastProvider>
     </BrowserRouter>
   );
 }

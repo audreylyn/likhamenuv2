@@ -6,6 +6,8 @@ import { useEditor } from '../src/contexts/EditorContext';
 import { useWebsite } from '../src/contexts/WebsiteContext';
 import { supabase } from '../src/lib/supabase';
 import { MenuItem } from '../types';
+import { ConfirmationModal } from '../src/components/ConfirmationModal';
+import { useToast } from '../src/components/Toast';
 
 // =====================================================
 // COUNTDOWN TIMER COMPONENT
@@ -132,8 +134,10 @@ export const SpecialOffers: React.FC<SpecialOffersProps> = ({ addToCart }) => {
   const [config, setConfig] = useState<SpecialOffersConfig | null>(null);
   const [offers, setOffers] = useState<SpecialOffer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
   const { isEditing, saveField } = useEditor();
   const { websiteData, loading: websiteLoading } = useWebsite();
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (!websiteLoading && websiteData?.content?.specialOffers) {
@@ -172,20 +176,28 @@ export const SpecialOffers: React.FC<SpecialOffersProps> = ({ addToCart }) => {
       setOffers(newOffers);
     } catch (error) {
       console.error('Error adding offer:', error);
-      alert('Failed to add offer. Please try again.');
+      showToast('Failed to add offer. Please try again.', 'error');
     }
   };
 
   const handleDeleteOffer = async (offerId: string) => {
-    if (!window.confirm('Are you sure you want to delete this offer?')) return;
-    try {
-      const newOffers = offers.filter(o => o.id !== offerId);
-      await saveField('specialOffers', 'items', newOffers);
-      setOffers(newOffers);
-    } catch (error) {
-      console.error('Error deleting offer:', error);
-      alert('Failed to delete offer. Please try again.');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Special Offer',
+      message: 'Are you sure you want to delete this offer?',
+      onConfirm: async () => {
+        try {
+          const newOffers = offers.filter(o => o.id !== offerId);
+          await saveField('specialOffers', 'items', newOffers);
+          setOffers(newOffers);
+          setConfirmModal(null);
+        } catch (error) {
+          setConfirmModal(null);
+          console.error('Error deleting offer:', error);
+          showToast('Failed to delete offer. Please try again.', 'error');
+        }
+      }
+    });
   };
 
   const handleClaimDeal = (offer: SpecialOffer) => {
@@ -367,6 +379,14 @@ export const SpecialOffers: React.FC<SpecialOffersProps> = ({ addToCart }) => {
           </p>
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={!!confirmModal?.isOpen}
+        title={confirmModal?.title}
+        message={confirmModal?.message || ""}
+        onClose={() => setConfirmModal(null)}
+        onConfirm={confirmModal?.onConfirm || (() => { })}
+      />
     </section>
   );
 };
@@ -388,18 +408,19 @@ const OfferCard: React.FC<{
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const status = getOfferStatus(offer);
+  const { showToast } = useToast();
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      showToast('Please select an image file', 'warning');
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('Image must be less than 5MB');
+      showToast('Image must be less than 5MB', 'warning');
       return;
     }
 
@@ -421,7 +442,7 @@ const OfferCard: React.FC<{
       setOffers(newOffers);
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload image. Please try again.');
+      showToast('Failed to upload image. Please try again.', 'error');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';

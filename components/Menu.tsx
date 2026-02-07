@@ -8,6 +8,8 @@ import { EditableImage } from '../src/components/editor/EditableImage';
 import { useEditor } from '../src/contexts/EditorContext';
 import { useWebsite } from '../src/contexts/WebsiteContext';
 import { PLANS } from '../src/lib/plans';
+import { ConfirmationModal } from '../src/components/ConfirmationModal';
+import { useToast } from '../src/components/Toast';
 
 // Extended MenuItem type with rating and review_count
 type MenuItemWithRating = MenuItem & { rating?: number; review_count?: number };
@@ -36,8 +38,10 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('all');
   const [selectedItem, setSelectedItem] = useState<MenuItemWithRating | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
   const { isEditing, saveField } = useEditor();
   const { websiteData, loading: websiteLoading } = useWebsite();
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (!websiteLoading && websiteData?.content?.menu) {
@@ -163,20 +167,27 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                 {isEditing && !isAllCategory && (
                   <button
                     onClick={async () => {
-                      if (window.confirm(`Are you sure you want to delete the "${getCategoryName(category)}" category?`)) {
-                        try {
-                          const newCategories = categories.filter(c => c.id !== category);
-                          await saveField('menu', 'categories', newCategories);
+                      setConfirmModal({
+                        isOpen: true,
+                        title: `Delete Category`,
+                        message: `Are you sure you want to delete the "${getCategoryName(category)}" category?`,
+                        onConfirm: async () => {
+                          try {
+                            const newCategories = categories.filter(c => c.id !== category);
+                            await saveField('menu', 'categories', newCategories);
 
-                          setCategories(newCategories);
-                          if (activeCategory === category) {
-                            setActiveCategory('all');
+                            setCategories(newCategories);
+                            if (activeCategory === category) {
+                              setActiveCategory('all');
+                            }
+                            setConfirmModal(null);
+                          } catch (error) {
+                            setConfirmModal(null);
+                            console.error('Error deleting category:', error);
+                            showToast('Failed to delete category. Please try again.', 'error');
                           }
-                        } catch (error) {
-                          console.error('Error deleting category:', error);
-                          alert('Failed to delete category. Please try again.');
                         }
-                      }
+                      });
                     }}
                     className="absolute -top-2 -right-2 z-10 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors shadow-lg opacity-0 group-hover:opacity-100"
                     title="Delete category"
@@ -236,7 +247,7 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                   setCategories(newCategories);
                 } catch (error) {
                   console.error('Error adding category:', error);
-                  alert('Failed to add category. Please try again.');
+                  showToast('Failed to add category. Please try again.', 'error');
                 }
               }}
               className="px-6 py-2 rounded-full font-serif font-bold text-lg bg-blue-500 text-white border-2 border-blue-600 hover:bg-blue-600 transition-colors flex items-center gap-2"
@@ -344,22 +355,29 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                       <button
                         onClick={async (e) => {
                           e.stopPropagation();
-                          if (window.confirm(`Are you sure you want to delete "${item.name}"?`)) {
-                            try {
-                              const updatedItems = dbMenuItems.filter(db => db.id !== item.id);
-                              await saveField('menu', 'items', updatedItems);
+                          setConfirmModal({
+                            isOpen: true,
+                            title: `Delete Product`,
+                            message: `Are you sure you want to delete "${item.name}"?`,
+                            onConfirm: async () => {
+                              try {
+                                const updatedItems = dbMenuItems.filter(db => db.id !== item.id);
+                                await saveField('menu', 'items', updatedItems);
 
-                              setDbMenuItems(updatedItems);
-                              setMenuItems(updatedItems.map(adaptMenuItem));
+                                setDbMenuItems(updatedItems);
+                                setMenuItems(updatedItems.map(adaptMenuItem));
 
-                              if (selectedItem && selectedItem.id === item.id) {
-                                setSelectedItem(null);
+                                if (selectedItem && selectedItem.id === item.id) {
+                                  setSelectedItem(null);
+                                }
+                                setConfirmModal(null);
+                              } catch (error) {
+                                setConfirmModal(null);
+                                console.error('Error deleting product:', error);
+                                showToast('Failed to delete product. Please try again.', 'error');
                               }
-                            } catch (error) {
-                              console.error('Error deleting product:', error);
-                              alert('Failed to delete product. Please try again.');
                             }
-                          }
+                          });
                         }}
                         className="bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition-colors shadow-lg"
                         title="Delete product"
@@ -465,13 +483,13 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                   const limit = plan?.productLimit !== undefined ? plan.productLimit : 12;
 
                   if (limit !== 'unlimited' && dbMenuItems.length >= limit) {
-                    alert(`You have reached the product limit for your plan (${limit}). Please upgrade to add more.`);
+                    showToast(`You have reached the product limit for your plan (${limit}). Please upgrade to add more.`, 'warning');
                     return;
                   }
 
                   const defaultCategoryId = categories.length > 0 ? categories[0].id : null;
                   if (!defaultCategoryId) {
-                    alert('Please create a category first before adding products.');
+                    showToast('Please create a category first before adding products.', 'warning');
                     return;
                   }
 
@@ -502,7 +520,7 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                   setMenuItems(updatedItems.map(adaptMenuItem));
                 } catch (error) {
                   console.error('Error adding product:', error);
-                  alert('Failed to add product. Please try again.');
+                  showToast('Failed to add product. Please try again.', 'error');
                 }
               }}
               className="bg-bakery-light rounded-2xl border-2 border-dashed border-bakery-sand/60 hover:border-bakery-primary hover:bg-bakery-cream/60 transition-colors flex flex-col items-center justify-center gap-3 p-8 h-full min-h-[400px] text-bakery-text/70 hover:text-bakery-primary"
@@ -669,6 +687,14 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={!!confirmModal?.isOpen}
+        title={confirmModal?.title}
+        message={confirmModal?.message || ""}
+        onClose={() => setConfirmModal(null)}
+        onConfirm={confirmModal?.onConfirm || (() => { })}
+      />
     </section>
   );
 };

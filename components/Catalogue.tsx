@@ -26,6 +26,8 @@ import { EditableText } from "../src/components/editor/EditableText";
 import { EditableImage } from "../src/components/editor/EditableImage";
 import { useEditor } from "../src/contexts/EditorContext";
 import { useWebsite } from "../src/contexts/WebsiteContext";
+import { ConfirmationModal } from "../src/components/ConfirmationModal";
+import { useToast } from "../src/components/Toast";
 
 // Simple ID generator to avoid uuid dependency
 const generateId = () => Math.random().toString(36).substring(2, 9);
@@ -208,14 +210,7 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({
 
                     {/* Content */}
                     <div className="p-6 flex flex-col">
-                        {/* Badges */}
-                        {product.badges && product.badges.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mb-4">
-                                {product.badges.map((badge, idx) => (
-                                    <ProductBadge key={idx} badge={badge} />
-                                ))}
-                            </div>
-                        )}
+
 
                         <h2 className="font-serif text-2xl font-bold text-bakery-dark mb-2">
                             {product.name}
@@ -277,9 +272,11 @@ export const Catalogue: React.FC<CatalogueProps> = () => {
     const [dbProducts, setDbProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [quickViewProduct, setQuickViewProduct] = useState<{ product: Product; menuItem: MenuItem } | null>(null);
+    const [deleteModalState, setDeleteModalState] = useState<{ isOpen: boolean; product: Product | null }>({ isOpen: false, product: null });
     const carouselRef = useRef<HTMLDivElement>(null);
     const { isEditing, saveField } = useEditor();
     const { websiteData, loading: websiteLoading, contentVersion } = useWebsite();
+    const { showToast } = useToast();
 
     useEffect(() => {
         if (!websiteLoading) {
@@ -431,8 +428,7 @@ export const Catalogue: React.FC<CatalogueProps> = () => {
                                 <div key={item.id} className="group flex flex-col h-full flex-shrink-0 w-[80vw] md:w-auto snap-center">
                                     {/* Image Container */}
                                     <div
-                                        className={`aspect-[4/5] w-full rounded-2xl overflow-hidden mb-6 relative shadow-md hover:shadow-xl transition-all duration-500 cursor-pointer ${isSoldOut ? 'grayscale' : ''}`}
-                                        onClick={() => dbProduct && setQuickViewProduct({ product: dbProduct, menuItem: item })}
+                                        className={`aspect-[4/5] w-full rounded-2xl overflow-hidden mb-6 relative shadow-md hover:shadow-xl transition-all duration-500`}
                                     >
                                         <EditableImage
                                             src={item.image}
@@ -449,57 +445,18 @@ export const Catalogue: React.FC<CatalogueProps> = () => {
                                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                         />
 
-                                        {/* Badges */}
-                                        <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
-                                            {dbProduct?.badges && dbProduct.badges.length > 0 && (
-                                                dbProduct.badges.slice(0, 2).map((badge, idx) => (
-                                                    <ProductBadge key={idx} badge={badge} />
-                                                ))
-                                            )}
-                                        </div>
 
-                                        {/* Sold Out Overlay - Visual Only */}
-                                        {isSoldOut && (
-                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                                <span className="bg-gray-800 text-white px-4 py-2 rounded-full font-bold text-sm">
-                                                    Sold Out
-                                                </span>
-                                            </div>
-                                        )}
+
+
 
                                         {/* Status Toggle & Delete - Edit Mode Only */}
                                         {isEditing && dbProduct && (
-                                            <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
+                                            <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
+
                                                 <button
                                                     onClick={async (e) => {
                                                         e.stopPropagation();
-                                                        const currentStatus = dbProduct.is_available !== false;
-                                                        const updatedDbProducts = dbProducts.map((db) =>
-                                                            db.id === dbProduct.id ? { ...db, is_available: !currentStatus } : db
-                                                        );
-                                                        await saveField("catalogue", "products", updatedDbProducts);
-                                                        setDbProducts(updatedDbProducts);
-                                                        setProducts(updatedDbProducts.map(adaptProduct));
-                                                    }}
-                                                    className={`p-2 rounded-full shadow-lg transition-colors ${dbProduct.is_available !== false
-                                                        ? 'bg-green-500 hover:bg-green-600 text-white'
-                                                        : 'bg-gray-400 hover:bg-gray-500 text-white'
-                                                        }`}
-                                                    title={dbProduct.is_available !== false ? 'Available - Click to mark Sold Out' : 'Sold Out - Click to mark Available'}
-                                                >
-                                                    {dbProduct.is_available !== false
-                                                        ? <ToggleRight size={16} />
-                                                        : <ToggleLeft size={16} />}
-                                                </button>
-                                                <button
-                                                    onClick={async (e) => {
-                                                        e.stopPropagation();
-                                                        if (window.confirm(`Are you sure you want to delete "${dbProduct.name}"?`)) {
-                                                            const updatedDbProducts = dbProducts.filter((db) => db.id !== dbProduct.id);
-                                                            await saveField("catalogue", "products", updatedDbProducts);
-                                                            setDbProducts(updatedDbProducts);
-                                                            setProducts(updatedDbProducts.map(adaptProduct));
-                                                        }
+                                                        setDeleteModalState({ isOpen: true, product: dbProduct });
                                                     }}
                                                     className="bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-colors"
                                                     title="Delete Product"
@@ -620,7 +577,7 @@ export const Catalogue: React.FC<CatalogueProps> = () => {
                                     const limit = plan?.productLimit !== undefined ? plan.productLimit : 12; // Default to 12
 
                                     if (limit !== 'unlimited' && dbProducts.length >= limit) {
-                                        alert(`You have reached the product limit for your plan (${limit}). Please upgrade to add more.`);
+                                        showToast(`You have reached the product limit for your plan (${limit}). Please upgrade to add more.`, 'warning');
                                         return;
                                     }
 
@@ -645,7 +602,7 @@ export const Catalogue: React.FC<CatalogueProps> = () => {
                                         setProducts(updatedDbProducts.map(adaptProduct));
                                     } catch (error) {
                                         console.error("Error adding product:", error);
-                                        alert("Failed to add product.");
+                                        showToast("Failed to add product.", "error");
                                     }
                                 }}
                                 className="group flex flex-col h-full flex-shrink-0 w-[80vw] md:w-auto snap-center items-center justify-center min-h-[400px] border-2 border-dashed border-bakery-sand rounded-2xl hover:border-bakery-primary hover:bg-bakery-cream/30 transition-all cursor-pointer"
@@ -674,6 +631,32 @@ export const Catalogue: React.FC<CatalogueProps> = () => {
                 isOpen={!!quickViewProduct}
                 onClose={() => setQuickViewProduct(null)}
                 isEditing={isEditing}
+            />
+
+            {/* Delete Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={deleteModalState.isOpen}
+                title="Delete Product"
+                message={
+                    <span>
+                        Are you sure you want to delete <span className="font-bold">"{deleteModalState.product?.name}"</span>? This action cannot be undone.
+                    </span>
+                }
+                confirmLabel="Delete"
+                variant="danger"
+                onClose={() => setDeleteModalState({ isOpen: false, product: null })}
+                onConfirm={async () => {
+                    if (deleteModalState.product) {
+                        const updatedDbProducts = dbProducts.filter((db) => db.id !== deleteModalState.product?.id);
+                        // Update local state first for immediate feedback
+                        setDbProducts(updatedDbProducts);
+                        setProducts(updatedDbProducts.map(adaptProduct));
+                        setDeleteModalState({ isOpen: false, product: null });
+
+                        // Then save to DB
+                        await saveField("catalogue", "products", updatedDbProducts);
+                    }
+                }}
             />
         </section>
     );

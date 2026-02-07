@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import { 
-  Wallet, 
-  Building2, 
-  QrCode, 
-  Copy, 
-  Check, 
+import {
+  Wallet,
+  Building2,
+  QrCode,
+  Copy,
+  Check,
   CreditCard,
   Smartphone,
   Shield,
@@ -16,6 +16,8 @@ import { EditableText } from "../src/components/editor/EditableText";
 import { useEditor } from "../src/contexts/EditorContext";
 import { useWebsite } from "../src/contexts/WebsiteContext";
 import { supabase } from "../src/lib/supabase";
+import { ConfirmationModal } from "../src/components/ConfirmationModal";
+import { useToast } from "../src/components/Toast";
 
 interface PaymentContent {
   id: string;
@@ -76,9 +78,11 @@ export const Payment: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [uploadingField, setUploadingField] = useState<string | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
   const { isEditing, saveField } = useEditor();
   const { websiteData, loading: websiteLoading } = useWebsite();
-  
+  const { showToast } = useToast();
+
   const gcashInputRef = useRef<HTMLInputElement>(null);
   const mayaInputRef = useRef<HTMLInputElement>(null);
 
@@ -106,13 +110,13 @@ export const Payment: React.FC = () => {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      showToast('Please select an image file', 'warning');
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert('Image must be less than 5MB');
+      showToast('Image must be less than 5MB', 'warning');
       return;
     }
 
@@ -149,25 +153,32 @@ export const Payment: React.FC = () => {
       setContent(updatedPayment);
     } catch (error: any) {
       console.error("Error uploading QR code:", error);
-      alert("Failed to upload image: " + (error.message || 'Unknown error'));
+      showToast("Failed to upload image: " + (error.message || 'Unknown error'), 'error');
     } finally {
       setUploadingField(null);
     }
   };
 
   const handleRemoveImage = async (field: 'gcash' | 'maya') => {
-    if (!window.confirm('Remove this QR code image?')) return;
-
-    try {
-      const updatedPayment = {
-        ...content,
-        [field]: { ...content[field], qr_code_url: '' }
-      };
-      await saveField("payment", field, updatedPayment[field]);
-      setContent(updatedPayment);
-    } catch (error: any) {
-      console.error("Error removing QR code:", error);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Remove QR Code',
+      message: 'Are you sure you want to remove this QR code image?',
+      onConfirm: async () => {
+        try {
+          const updatedPayment = {
+            ...content,
+            [field]: { ...content[field], qr_code_url: '' }
+          };
+          await saveField("payment", field, updatedPayment[field]);
+          setContent(updatedPayment);
+          setConfirmModal(null);
+        } catch (error: any) {
+          setConfirmModal(null);
+          console.error("Error removing QR code:", error);
+        }
+      }
+    });
   };
 
   const handleFieldSave = async (
@@ -213,7 +224,7 @@ export const Payment: React.FC = () => {
               <span className="text-sm font-semibold tracking-wider uppercase">{content.subheading}</span>
             )}
           </div>
-          
+
           {isEditing ? (
             <EditableText
               value={content.heading}
@@ -229,7 +240,7 @@ export const Payment: React.FC = () => {
               {content.heading}
             </h2>
           )}
-          
+
           {isEditing ? (
             <EditableText
               value={content.description}
@@ -249,7 +260,7 @@ export const Payment: React.FC = () => {
 
         {/* Payment Methods Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-          
+
           {/* GCash Card - Using theme primary color */}
           {content.gcash.enabled && (
             <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 hover:shadow-2xl transition-shadow duration-300">
@@ -265,7 +276,7 @@ export const Payment: React.FC = () => {
                   </div>
                 </div>
               </div>
-              
+
               {/* GCash Content */}
               <div className="p-6">
                 {/* Hidden file input */}
@@ -283,7 +294,7 @@ export const Payment: React.FC = () => {
 
                 {/* QR Code Display */}
                 <div className="flex flex-col items-center mb-6">
-                  <div 
+                  <div
                     className={`relative bg-bakery-beige/50 rounded-2xl p-4 mb-4 ${isEditing ? 'cursor-pointer hover:ring-2 hover:ring-bakery-primary group' : ''}`}
                     onClick={isEditing ? () => gcashInputRef.current?.click() : undefined}
                   >
@@ -293,9 +304,9 @@ export const Payment: React.FC = () => {
                       </div>
                     ) : content.gcash.qr_code_url ? (
                       <>
-                        <img 
-                          src={content.gcash.qr_code_url} 
-                          alt="GCash QR Code" 
+                        <img
+                          src={content.gcash.qr_code_url}
+                          alt="GCash QR Code"
                           className="w-48 h-48 object-contain rounded-lg"
                         />
                         {isEditing && (
@@ -393,7 +404,7 @@ export const Payment: React.FC = () => {
                   </div>
                 </div>
               </div>
-              
+
               {/* Bank Content */}
               <div className="p-6">
                 {/* Bank Icon Display */}
@@ -495,7 +506,7 @@ export const Payment: React.FC = () => {
                   </div>
                 </div>
               </div>
-              
+
               {/* Maya Content */}
               <div className="p-6">
                 {/* Hidden file input */}
@@ -513,7 +524,7 @@ export const Payment: React.FC = () => {
 
                 {/* QR Code Display */}
                 <div className="flex flex-col items-center mb-6">
-                  <div 
+                  <div
                     className={`relative bg-bakery-beige/50 rounded-2xl p-4 mb-4 ${isEditing ? 'cursor-pointer hover:ring-2 hover:ring-bakery-accent group' : ''}`}
                     onClick={isEditing ? () => mayaInputRef.current?.click() : undefined}
                   >
@@ -523,9 +534,9 @@ export const Payment: React.FC = () => {
                       </div>
                     ) : content.maya.qr_code_url ? (
                       <>
-                        <img 
-                          src={content.maya.qr_code_url} 
-                          alt="Maya QR Code" 
+                        <img
+                          src={content.maya.qr_code_url}
+                          alt="Maya QR Code"
                           className="w-48 h-48 object-contain rounded-lg"
                         />
                         {isEditing && (
@@ -631,6 +642,14 @@ export const Payment: React.FC = () => {
           )}
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={!!confirmModal?.isOpen}
+        title={confirmModal?.title}
+        message={confirmModal?.message || ""}
+        onClose={() => setConfirmModal(null)}
+        onConfirm={confirmModal?.onConfirm || (() => { })}
+      />
     </section>
   );
 };

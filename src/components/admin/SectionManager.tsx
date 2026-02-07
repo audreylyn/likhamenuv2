@@ -10,6 +10,7 @@ import { getWebsiteId } from "../../lib/supabase";
 import { getUserWebsites } from "../../lib/auth";
 import { Save, RefreshCw, Globe, AlertCircle } from "lucide-react";
 import { clearSectionCache } from "../../lib/section-visibility";
+import { useToast } from "../Toast";
 
 const SECTION_DEFINITIONS = [
   {
@@ -92,6 +93,7 @@ export const SectionManager: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     loadWebsites();
@@ -224,7 +226,7 @@ export const SectionManager: React.FC = () => {
 
   const handleSave = async () => {
     if (!selectedWebsiteId) {
-      alert("Please select a website first");
+      showToast("Please select a website first", "warning");
       return;
     }
 
@@ -249,10 +251,10 @@ export const SectionManager: React.FC = () => {
         localStorage.removeItem(`likhamenu_website_${selectedWebsite.subdomain}`);
       }
 
-      alert("Sections updated successfully! Refresh the public site to see changes.");
+      showToast("Sections updated successfully! Refresh the public site to see changes.", "success");
     } catch (error: any) {
       console.error("Error saving sections:", error);
-      alert(`Error: ${error.message}`);
+      showToast(`Error: ${error.message}`, 'error');
     } finally {
       setSaving(false);
     }
