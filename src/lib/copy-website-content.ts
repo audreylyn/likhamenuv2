@@ -4,6 +4,7 @@
  */
 
 import { supabase } from "./supabase";
+import { DEFAULT_WEBSITE_CONTENT } from "./default-content";
 
 /**
  * Get the golden-crumb website ID
@@ -104,6 +105,12 @@ export async function copyWebsiteContent(
       enabledsections: newEnabledSections,
       updatedat: new Date().toISOString(),
     };
+
+    // Ensure catalogue content is populated if missing or empty in source
+    // This handles the case where golden-crumb template is outdated
+    if (!updatePayload.content.catalogue || !updatePayload.content.catalogue.products || updatePayload.content.catalogue.products.length === 0) {
+      updatePayload.content.catalogue = DEFAULT_WEBSITE_CONTENT.catalogue;
+    }
 
     // Update target website
     const { error: updateError } = await supabase

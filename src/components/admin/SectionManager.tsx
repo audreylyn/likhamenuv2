@@ -30,6 +30,11 @@ const SECTION_DEFINITIONS = [
     description: "Highlighted products",
   },
   { name: "menu", label: "Menu Section", description: "Product menu" },
+  {
+    name: "catalogue",
+    label: "Catalogue",
+    description: "Product showcase (No ordering)",
+  },
   { name: "reservation", label: "Reservation", description: "Booking form" },
   {
     name: "testimonials",
@@ -188,7 +193,7 @@ export const SectionManager: React.FC = () => {
       if (error) throw error;
 
       // enabledsections is a JSONB array of section names
-      const sections = (data?.enabledsections as string[]) || [];
+      const sections = data ? ((data as any).enabledsections as string[]) : [];
 
       // If empty array, default to all sections enabled
       if (sections.length === 0) {
@@ -226,8 +231,7 @@ export const SectionManager: React.FC = () => {
     setSaving(true);
     try {
       // Update enabledsections JSONB array in websites table
-      const { error } = await supabase
-        .from("websites")
+      const { error } = await (supabase.from("websites") as any)
         .update({
           enabledsections: enabledSections,
           updatedat: new Date().toISOString(),
@@ -395,11 +399,10 @@ export const SectionManager: React.FC = () => {
                           {def.label}
                         </h3>
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            isEnabled
-                              ? "bg-green-100 text-green-700"
-                              : "bg-gray-100 text-gray-600"
-                          }`}
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${isEnabled
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-600"
+                            }`}
                         >
                           {isEnabled ? "Enabled" : "Disabled"}
                         </span>
@@ -410,14 +413,12 @@ export const SectionManager: React.FC = () => {
                     </div>
                     <button
                       onClick={() => toggleSection(def.name)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        isEnabled ? "bg-gray-900" : "bg-gray-300"
-                      }`}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isEnabled ? "bg-gray-900" : "bg-gray-300"
+                        }`}
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          isEnabled ? "translate-x-6" : "translate-x-1"
-                        }`}
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isEnabled ? "translate-x-6" : "translate-x-1"
+                          }`}
                       />
                     </button>
                   </div>

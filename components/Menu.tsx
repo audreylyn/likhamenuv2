@@ -7,6 +7,7 @@ import { EditableText } from '../src/components/editor/EditableText';
 import { EditableImage } from '../src/components/editor/EditableImage';
 import { useEditor } from '../src/contexts/EditorContext';
 import { useWebsite } from '../src/contexts/WebsiteContext';
+import { PLANS } from '../src/lib/plans';
 
 // Extended MenuItem type with rating and review_count
 type MenuItemWithRating = MenuItem & { rating?: number; review_count?: number };
@@ -458,6 +459,16 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
             <button
               onClick={async () => {
                 try {
+                  // LIMIT CHECK
+                  const planId = websiteData?.marketing?.plan_id || 'basic';
+                  const plan = PLANS.find(p => p.id === planId);
+                  const limit = plan?.productLimit !== undefined ? plan.productLimit : 12;
+
+                  if (limit !== 'unlimited' && dbMenuItems.length >= limit) {
+                    alert(`You have reached the product limit for your plan (${limit}). Please upgrade to add more.`);
+                    return;
+                  }
+
                   const defaultCategoryId = categories.length > 0 ? categories[0].id : null;
                   if (!defaultCategoryId) {
                     alert('Please create a category first before adding products.');
@@ -644,8 +655,8 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
                       }}
                       disabled={modalIsSoldOut}
                       className={`w-full py-3.5 rounded-xl font-serif font-bold text-lg transition-all duration-300 flex items-center justify-center gap-2 ${modalIsSoldOut
-                          ? 'bg-gray-400 text-white cursor-not-allowed'
-                          : 'bg-bakery-primary text-white hover:bg-bakery-dark hover:shadow-lg'
+                        ? 'bg-gray-400 text-white cursor-not-allowed'
+                        : 'bg-bakery-primary text-white hover:bg-bakery-dark hover:shadow-lg'
                         }`}
                     >
                       <ShoppingBag size={20} />

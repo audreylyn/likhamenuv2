@@ -3,36 +3,38 @@ export interface ServicePlan {
     name: string;
     price: number;
     sections: string[];
+    productLimit: number | "unlimited";
+    description: string;
 }
 
 export const PLANS: ServicePlan[] = [
     {
         id: "basic",
         name: "Basic Plan",
-        price: 1999,
-        sections: ["hero", "about", "menu", "payment", "contact", "footer"],
+        price: 999,
+        sections: ["hero", "catalogue", "footer"],
+        productLimit: 12,
+        description: "Ideal for marketing websites",
     },
     {
         id: "standard",
         name: "Standard Plan",
-        price: 2999,
+        price: 3499,
         sections: [
             "hero",
             "about",
             "menu",
-            "payment",
-            "contact",
-            "footer",
+            "featuredProducts",
             "testimonials",
-            "faq",
-            "instagramFeed",
-            "whyChooseUs",
+            "footer",
         ],
+        productLimit: 30,
+        description: "Great for small businesses and catalogs",
     },
     {
         id: "premium",
         name: "Premium Plan",
-        price: 4999,
+        price: 7499,
         sections: [
             "hero",
             "about",
@@ -50,5 +52,7 @@ export const PLANS: ServicePlan[] = [
             "specialOffers",
             "chatSupport",
         ],
+        productLimit: "unlimited",
+        description: "Full enterprise solution with automation",
     },
 ];

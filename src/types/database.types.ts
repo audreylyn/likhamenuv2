@@ -639,5 +639,9 @@ export interface FullWebsiteData {
   instagramFeed: InstagramFeedConfig;
   footer: FooterContent;
   chatSupport: ChatSupportConfig;
+  catalogue?: {
+    config: FeaturedProductsConfig; // Reusing FeaturedProductsConfig as structure is identical
+    products: Product[];
+  };
 }
 

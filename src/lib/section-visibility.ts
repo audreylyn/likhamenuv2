@@ -19,6 +19,7 @@ const ALL_SECTIONS = [
   "team",
   "featuredProducts",
   "menu",
+  "catalogue",
   "reservation",
   "testimonials",
   "specialOffers",
@@ -51,7 +52,7 @@ async function fetchEnabledSections(websiteId: string): Promise<string[]> {
   }
 
   // enabledsections is a JSONB array of section names
-  const enabledSections = (data?.enabledsections as string[]) || [];
+  const enabledSections = data ? ((data as any).enabledsections as string[]) : [];
 
   // Cache the result
   enabledSectionsCache = enabledSections;

@@ -15,6 +15,7 @@ import { WhyChooseUs } from "../../components/WhyChooseUs";
 import { Testimonials } from "../../components/Testimonials";
 import { SpecialOffers } from "../../components/SpecialOffers";
 import { FeaturedProducts } from "../../components/FeaturedProducts";
+import { Catalogue } from "../../components/Catalogue";
 import { InstagramFeed } from "../../components/InstagramFeed";
 import { Cart } from "../../components/Cart";
 import { Reservation } from "../../components/Reservation";
@@ -276,6 +277,9 @@ export const PublicSite: React.FC = () => {
         <ConditionalSection section="menu">
           <Menu addToCart={addToCart} />
         </ConditionalSection>
+        <ConditionalSection section="catalogue">
+          <Catalogue />
+        </ConditionalSection>
         <ConditionalSection section="reservation">
           <Reservation />
         </ConditionalSection>
@@ -298,8 +302,10 @@ export const PublicSite: React.FC = () => {
           <InstagramFeed />
         </ConditionalSection>
       </main>
-      {/* Footer is always shown - it's essential for navigation/contact info */}
-      <Footer />
+      {/* Footer is always shown unless disabled in sections */}
+      <ConditionalSection section="footer">
+        <Footer />
+      </ConditionalSection>
       <ConditionalSection section="chatSupport">
         <ChatSupport />
       </ConditionalSection>

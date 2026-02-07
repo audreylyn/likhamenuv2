@@ -49,6 +49,8 @@ const SECTION_DEFINITIONS = [
   { name: "contact", label: "Contact Section" },
   { name: "instagramFeed", label: "Instagram Feed" },
   { name: "chatSupport", label: "Chat Support" },
+  { name: "catalogue", label: "Catalogue" },
+  { name: "footer", label: "Footer" },
 ];
 
 export const WebsiteList: React.FC = () => {
@@ -175,7 +177,9 @@ export const WebsiteList: React.FC = () => {
         enabledsections: Array.from(enabledSections),
         content: {},
         messenger: {},
-        marketing: {},
+        marketing: {
+          plan_id: newWebsite.selectedPlan,
+        },
         contactformconfig: {},
         assignededitors: [],
       });
