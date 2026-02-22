@@ -419,13 +419,13 @@ export const Catalogue: React.FC<CatalogueProps> = () => {
                         ref={carouselRef}
                         className="flex md:grid md:grid-cols-3 gap-8 lg:gap-12 overflow-x-auto md:overflow-visible snap-x snap-mandatory pb-4 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide"
                     >
-                        {products.map((item) => {
-                            const dbProduct = dbProducts.find((db) => db.id === item.id || db.name === item.name);
+                        {products.map((item, index) => {
+                            const dbProduct = dbProducts[index];
                             // Default to available (not sold out) if is_available is undefined
                             const isSoldOut = dbProduct ? (dbProduct.is_available === false) : false;
 
                             return (
-                                <div key={item.id} className="group flex flex-col h-full flex-shrink-0 w-[80vw] md:w-auto snap-center">
+                                <div key={dbProduct?.id || index} className="group flex flex-col h-full flex-shrink-0 w-[80vw] md:w-auto snap-center">
                                     {/* Image Container */}
                                     <div
                                         className={`aspect-[4/5] w-full rounded-2xl overflow-hidden mb-6 relative shadow-md hover:shadow-xl transition-all duration-500`}
@@ -477,9 +477,6 @@ export const Catalogue: React.FC<CatalogueProps> = () => {
                                                 <EditableText
                                                     value={item.name}
                                                     onSave={async (newValue) => {
-                                                        const dbProduct = dbProducts.find(
-                                                            (db) => db.name === item.name || db.id === item.id, // Better matching
-                                                        );
                                                         if (dbProduct) {
                                                             const updatedDbProducts = dbProducts.map((db) =>
                                                                 db.id === dbProduct.id
@@ -508,9 +505,6 @@ export const Catalogue: React.FC<CatalogueProps> = () => {
                                                     value={item.price.toString()}
                                                     onSave={async (newValue) => {
                                                         const price = parseFloat(newValue) || 0;
-                                                        const dbProduct = dbProducts.find(
-                                                            (db) => db.name === item.name || db.id === item.id,
-                                                        );
                                                         if (dbProduct) {
                                                             const updatedDbProducts = dbProducts.map((db) =>
                                                                 db.id === dbProduct.id ? { ...db, price } : db,
@@ -537,9 +531,6 @@ export const Catalogue: React.FC<CatalogueProps> = () => {
                                             <EditableText
                                                 value={item.description}
                                                 onSave={async (newValue) => {
-                                                    const dbProduct = dbProducts.find(
-                                                        (db) => db.name === item.name || db.id === item.id,
-                                                    );
                                                     if (dbProduct) {
                                                         const updatedDbProducts = dbProducts.map((db) =>
                                                             db.id === dbProduct.id
