@@ -33,8 +33,9 @@ import { useToast } from "../src/components/Toast";
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
 // Adapter to convert DB product to UI menu item
-const adaptProduct = (dbProduct: Product): MenuItem => ({
+const adaptProduct = (dbProduct: Product): MenuItem & { originalId: string } => ({
     id: parseInt(dbProduct.id.slice(0, 8), 16) || Math.floor(Math.random() * 10000000),
+    originalId: dbProduct.id,
     name: dbProduct.name,
     description: dbProduct.description || "",
     price: Number(dbProduct.price),
@@ -268,7 +269,7 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({
 // =====================================================
 export const Catalogue: React.FC<CatalogueProps> = () => {
     const [config, setConfig] = useState<FeaturedProductsConfig | null>(null);
-    const [products, setProducts] = useState<MenuItem[]>([]);
+    const [products, setProducts] = useState<(MenuItem & { originalId: string })[]>([]);
     const [dbProducts, setDbProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [quickViewProduct, setQuickViewProduct] = useState<{ product: Product; menuItem: MenuItem } | null>(null);
@@ -420,7 +421,7 @@ export const Catalogue: React.FC<CatalogueProps> = () => {
                         className="flex md:grid md:grid-cols-3 gap-8 lg:gap-12 overflow-x-auto md:overflow-visible snap-x snap-mandatory pb-4 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide"
                     >
                         {products.map((item) => {
-                            const dbProduct = dbProducts.find((db) => db.id === item.id || db.name === item.name);
+                            const dbProduct = dbProducts.find((db) => db.id === item.originalId);
                             // Default to available (not sold out) if is_available is undefined
                             const isSoldOut = dbProduct ? (dbProduct.is_available === false) : false;
 
@@ -478,7 +479,7 @@ export const Catalogue: React.FC<CatalogueProps> = () => {
                                                     value={item.name}
                                                     onSave={async (newValue) => {
                                                         const dbProduct = dbProducts.find(
-                                                            (db) => db.name === item.name || db.id === item.id, // Better matching
+                                                            (db) => db.id === item.originalId,
                                                         );
                                                         if (dbProduct) {
                                                             const updatedDbProducts = dbProducts.map((db) =>
@@ -509,7 +510,7 @@ export const Catalogue: React.FC<CatalogueProps> = () => {
                                                     onSave={async (newValue) => {
                                                         const price = parseFloat(newValue) || 0;
                                                         const dbProduct = dbProducts.find(
-                                                            (db) => db.name === item.name || db.id === item.id,
+                                                            (db) => db.id === item.originalId,
                                                         );
                                                         if (dbProduct) {
                                                             const updatedDbProducts = dbProducts.map((db) =>
@@ -538,7 +539,7 @@ export const Catalogue: React.FC<CatalogueProps> = () => {
                                                 value={item.description}
                                                 onSave={async (newValue) => {
                                                     const dbProduct = dbProducts.find(
-                                                        (db) => db.name === item.name || db.id === item.id,
+                                                        (db) => db.id === item.originalId,
                                                     );
                                                     if (dbProduct) {
                                                         const updatedDbProducts = dbProducts.map((db) =>
