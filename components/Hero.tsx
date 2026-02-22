@@ -56,6 +56,8 @@ export const Hero: React.FC = () => {
   const { showToast } = useToast();
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
 
+  const planId = websiteData?.marketing?.plan_id || 'basic';
+
   // Sync content from websiteData whenever it changes
   useEffect(() => {
     if (!websiteLoading) {
@@ -161,6 +163,11 @@ export const Hero: React.FC = () => {
 
   const handleAddSlide = async () => {
     if (!content) return;
+
+    if (planId === 'basic' && slides.length >= 1) {
+      showToast("Basic plan is limited to 1 slide. Upgrade to add more.", "warning");
+      return;
+    }
 
     try {
       // Generate a new ID (use max existing ID + 1, or Date.now() if no slides)
@@ -327,32 +334,43 @@ export const Hero: React.FC = () => {
 
           {/* Add/Delete Slide Buttons */}
           <div className="flex gap-2">
-            <button
-              onClick={handleAddSlide}
-              className="bg-white/95 backdrop-blur-sm rounded-lg px-4 py-2 flex items-center gap-2 shadow-lg hover:bg-white transition-colors border-2 border-green-500"
-              title="Add a new slide"
-            >
-              <Plus size={20} className="text-gray-700" />
-              <span className="text-gray-700 font-medium text-sm">
-                Add Slide
-              </span>
-            </button>
+            {planId !== 'basic' && (
+              <>
+                <button
+                  onClick={handleAddSlide}
+                  className="bg-white/95 backdrop-blur-sm rounded-lg px-4 py-2 flex items-center gap-2 shadow-lg hover:bg-white transition-colors border-2 border-green-500"
+                  title="Add a new slide"
+                >
+                  <Plus size={20} className="text-gray-700" />
+                  <span className="text-gray-700 font-medium text-sm">
+                    Add Slide
+                  </span>
+                </button>
 
-            <button
-              onClick={handleDeleteSlide}
-              disabled={slides.length <= 1}
-              className="bg-white/95 backdrop-blur-sm rounded-lg px-4 py-2 flex items-center gap-2 shadow-lg hover:bg-white transition-colors border-2 border-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              title={
-                slides.length <= 1
-                  ? "Cannot delete the last slide"
-                  : "Delete current slide"
-              }
-            >
-              <Trash2 size={20} className="text-gray-700" />
-              <span className="text-gray-700 font-medium text-sm">
-                Delete Slide
-              </span>
-            </button>
+                <button
+                  onClick={handleDeleteSlide}
+                  disabled={slides.length <= 1}
+                  className="bg-white/95 backdrop-blur-sm rounded-lg px-4 py-2 flex items-center gap-2 shadow-lg hover:bg-white transition-colors border-2 border-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={
+                    slides.length <= 1
+                      ? "Cannot delete the last slide"
+                      : "Delete current slide"
+                  }
+                >
+                  <Trash2 size={20} className="text-gray-700" />
+                  <span className="text-gray-700 font-medium text-sm">
+                    Delete Slide
+                  </span>
+                </button>
+              </>
+            )}
+            {planId === 'basic' && (
+              <div className="bg-white/95 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg border-2 border-gray-300">
+                <span className="text-gray-500 text-xs font-medium">
+                  Upgrade for multiple slides
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}
