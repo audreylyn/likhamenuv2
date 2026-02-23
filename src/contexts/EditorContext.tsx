@@ -62,41 +62,21 @@ export const EditorProvider: React.FC<{
           );
         }
 
-        // First fetch the current content
-        const { data: websiteData, error: fetchError } = await (supabase
-          .from("websites") as any)
-          .select("content")
-          .eq("id", websiteId)
-          .single();
+        // Use RPC function to update content (bypasses RLS for password-authenticated editors)
+        const { data: rpcResult, error: rpcError } = await supabase.rpc(
+          'update_website_content',
+          {
+            p_website_id: websiteId,
+            p_section: section,
+            p_field: field,
+            p_value: JSON.stringify(value),
+          }
+        );
 
-        if (fetchError) throw fetchError;
-
-        // Get current content or initialize empty object
-        const currentContent =
-          (websiteData?.content as Record<string, any>) || {};
-
-        // Get current section content or initialize empty object
-        const sectionContent = currentContent[section] || {};
-
-        // Update the specific field
-        sectionContent[field] = value;
-
-        // Update the section in content
-        currentContent[section] = sectionContent;
-
-        // Save back to database
-        const { error: updateError } = await (supabase
-          .from("websites") as any)
-          .update({
-            content: currentContent,
-            updatedat: new Date().toISOString(),
-          })
-          .eq("id", websiteId);
-
-        if (updateError) {
-          console.error(`❌ Error saving ${section}.${field}:`, updateError);
-          showToast(`Failed to save changes: ${updateError.message}`, 'error');
-          throw updateError;
+        if (rpcError) {
+          console.error(`❌ Error saving ${section}.${field}:`, rpcError);
+          showToast(`Failed to save changes: ${rpcError.message}`, 'error');
+          throw rpcError;
         }
 
         console.log(`✅ Saved content.${section}.${field}`);
@@ -124,35 +104,20 @@ export const EditorProvider: React.FC<{
           throw new Error("No website ID found.");
         }
 
-        // First fetch the current content
-        const { data: websiteData, error: fetchError } = await (supabase
-          .from("websites") as any)
-          .select("content")
-          .eq("id", websiteId)
-          .single();
+        // Use RPC function to update entire section (bypasses RLS for password-authenticated editors)
+        const { data: rpcResult, error: rpcError } = await supabase.rpc(
+          'update_website_section',
+          {
+            p_website_id: websiteId,
+            p_section: section,
+            p_content: JSON.stringify(content),
+          }
+        );
 
-        if (fetchError) throw fetchError;
-
-        // Get current content or initialize empty object
-        const currentContent =
-          (websiteData?.content as Record<string, any>) || {};
-
-        // Update the entire section
-        currentContent[section] = content;
-
-        // Save back to database
-        const { error: updateError } = await (supabase
-          .from("websites") as any)
-          .update({
-            content: currentContent,
-            updatedat: new Date().toISOString(),
-          })
-          .eq("id", websiteId);
-
-        if (updateError) {
-          console.error(`❌ Error saving ${section}:`, updateError);
-          showToast(`Failed to save changes: ${updateError.message}`, 'error');
-          throw updateError;
+        if (rpcError) {
+          console.error(`❌ Error saving ${section}:`, rpcError);
+          showToast(`Failed to save changes: ${rpcError.message}`, 'error');
+          throw rpcError;
         }
 
         console.log(`✅ Saved content.${section}`);

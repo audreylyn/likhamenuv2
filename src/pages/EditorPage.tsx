@@ -108,13 +108,10 @@ const EditorContent: React.FC = () => {
       // Ensure any UI state marked as changed is cleared
       await handleSave();
 
-      const { error } = await supabase
-        .from('websites')
-        .update({
-          status: 'published',
-          updatedat: new Date().toISOString(),
-        })
-        .eq('id', currentWebsite);
+      const { error } = await supabase.rpc('update_website_status', {
+        p_website_id: currentWebsite,
+        p_status: 'published',
+      });
 
       if (error) {
         console.error('❌ Publish failed:', error);
