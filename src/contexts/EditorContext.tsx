@@ -63,13 +63,14 @@ export const EditorProvider: React.FC<{
         }
 
         // Use RPC function to update content (bypasses RLS for password-authenticated editors)
+        // Note: supabase.rpc() handles JSONB serialization - do NOT JSON.stringify
         const { data: rpcResult, error: rpcError } = await supabase.rpc(
           'update_website_content',
           {
             p_website_id: websiteId,
             p_section: section,
             p_field: field,
-            p_value: JSON.stringify(value),
+            p_value: value,
           }
         );
 
@@ -105,12 +106,13 @@ export const EditorProvider: React.FC<{
         }
 
         // Use RPC function to update entire section (bypasses RLS for password-authenticated editors)
+        // Note: supabase.rpc() handles JSONB serialization - do NOT JSON.stringify
         const { data: rpcResult, error: rpcError } = await supabase.rpc(
           'update_website_section',
           {
             p_website_id: websiteId,
             p_section: section,
-            p_content: JSON.stringify(content),
+            p_content: content,
           }
         );
 
