@@ -46,6 +46,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   // Requirement: "just bring back the navbar, but in basic only the home, menu same goes with quick links"
   const isBasicPlan = websiteData?.marketing?.plan_id === 'basic';
 
+  // Show cart only if at least one ordering section (menu or featuredProducts) is enabled
+  const showCart = !isBasicPlan && (sectionVisibility['menu'] || sectionVisibility['featuredProducts']);
+
   // Update local content when websiteData changes
   useEffect(() => {
     if (websiteData?.content?.navbar) {
@@ -314,7 +317,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
 
             {/* Cart Button */}
-            {!isBasicPlan && (
+            {showCart && (
               <button
                 onClick={onOpenCart}
                 className={`flex items-center gap-2 px-5 py-2 rounded-full font-serif transition-all duration-300 shadow-lg group relative ${scrolled
@@ -335,7 +338,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center gap-4">
-            {!isBasicPlan && (
+            {showCart && (
               <button
                 onClick={onOpenCart}
                 className={`relative p-2 rounded-full transition-colors ${scrolled
