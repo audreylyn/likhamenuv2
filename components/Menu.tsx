@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { MenuItem } from '../types';
-import { ShoppingBag, Eye, X, Star, Plus, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { ShoppingBag, Eye, X, Star, Plus, Trash2, ToggleLeft, ToggleRight, Upload } from 'lucide-react';
 import { getWebsiteId } from '../src/lib/supabase'; // Keep getWebsiteId if needed for other things, but maybe not?
 import type { MenuCategory, MenuItem as DBMenuItem, MenuSectionConfig } from '../src/types/database.types';
 import { EditableText } from '../src/components/editor/EditableText';
 import { EditableImage } from '../src/components/editor/EditableImage';
+import { BatchUploadModal } from '../src/components/editor/BatchUploadModal';
 import { useEditor } from '../src/contexts/EditorContext';
 import { useWebsite } from '../src/contexts/WebsiteContext';
 import { PLANS } from '../src/lib/plans';
@@ -39,6 +40,7 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
   const [activeCategory, setActiveCategory] = useState('all');
   const [selectedItem, setSelectedItem] = useState<MenuItemWithRating | null>(null);
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
+  const [batchUploadOpen, setBatchUploadOpen] = useState(false);
   const { isEditing, saveField } = useEditor();
   const { websiteData, loading: websiteLoading } = useWebsite();
   const { showToast } = useToast();
@@ -528,6 +530,17 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
             >
               <Plus size={32} />
               <span className="text-lg font-medium">Add Product</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setBatchUploadOpen(true);
+                }}
+                className="mt-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors flex items-center gap-2"
+                title="Upload multiple products via CSV"
+              >
+                <Upload size={14} />
+                Batch Upload
+              </button>
             </button>
           )}
         </div>
@@ -695,6 +708,33 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
         onClose={() => setConfirmModal(null)}
         onConfirm={confirmModal?.onConfirm || (() => { })}
       />
+
+      {isEditing && (
+        <BatchUploadModal
+          isOpen={batchUploadOpen}
+          onClose={() => setBatchUploadOpen(false)}
+          onConfirm={async (newItems) => {
+            try {
+              const updatedItems = [...dbMenuItems, ...newItems];
+              await saveField('menu', 'items', updatedItems);
+              setDbMenuItems(updatedItems);
+              setMenuItems(updatedItems.map(adaptMenuItem));
+              setBatchUploadOpen(false);
+              showToast(`Successfully added ${newItems.length} products!`, 'success');
+            } catch (error) {
+              console.error('Batch upload error:', error);
+              showToast('Failed to add products. Please try again.', 'error');
+            }
+          }}
+          categories={categories}
+          existingItemCount={dbMenuItems.length}
+          productLimit={(() => {
+            const planId = websiteData?.marketing?.plan_id || 'basic';
+            const plan = PLANS.find(p => p.id === planId);
+            return plan?.productLimit !== undefined ? plan.productLimit : 12;
+          })()}
+        />
+      )}
     </section>
   );
 };
