@@ -433,7 +433,7 @@ export const WebsiteEditor: React.FC = () => {
             <h2 className="text-xl font-bold text-gray-900">Theme</h2>
           </div>
           <p className="text-sm text-gray-600 mb-4">
-            Choose from 5 professional theme presets
+            Choose from {DEFAULT_THEMES.length} professional theme presets
           </p>
 
           <div className="grid grid-cols-1 gap-3">

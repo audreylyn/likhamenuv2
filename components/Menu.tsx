@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MenuItem } from '../types';
-import { ShoppingBag, Eye, X, Star, Plus, Trash2, ToggleLeft, ToggleRight, Upload } from 'lucide-react';
+import { ShoppingBag, Eye, EyeOff, X, Star, Plus, Trash2, ToggleLeft, ToggleRight, Upload } from 'lucide-react';
 import { getWebsiteId } from '../src/lib/supabase'; // Keep getWebsiteId if needed for other things, but maybe not?
 import type { MenuCategory, MenuItem as DBMenuItem, MenuSectionConfig } from '../src/types/database.types';
 import { EditableText } from '../src/components/editor/EditableText';
@@ -73,17 +73,15 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
     }
   }, [websiteData, websiteLoading]);
 
-  const filteredItems = activeCategory === 'all'
+  // Get visible category IDs (all shown in editor, only is_visible on public site)
+  const visibleCategoryIds = isEditing
+    ? categories.map(c => c.id)
+    : categories.filter(c => c.is_visible !== false).map(c => c.id);
+
+  // Filter items: on public site, only show items from visible categories
+  const visibleItems = isEditing
     ? menuItems
-    : menuItems.filter(item => item.category === activeCategory); // Note: item.category is category_id in our adapter logic if we cast it? 
-  // Wait, adaptMenuItem casts category_id to 'pastry'|...
-  // But categories have IDs like UUIDs. 
-  // We need to match based on ID.
-  // In adaptMenuItem: category: dbItem.category_id
-  // But TypeScript checks 'pastry' | 'bread'...
-  // If categories are dynamic, MenuItem.category type in types.ts is too restrictive.
-  // I should cast safely or update MenuItem type.
-  // For now assuming the cast works or suppressed.
+    : menuItems.filter(item => visibleCategoryIds.includes(item.category));
 
   const handleAddClick = (item: MenuItem, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -109,7 +107,25 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
 
   if (!config) return null;
 
-  const categoryNames = ['all', ...categories.map(c => c.id)];
+  // In editor mode show all categories; on public site only show visible ones
+  const displayCategories = isEditing
+    ? categories
+    : categories.filter(c => c.is_visible !== false);
+  // Show 'All' button only in editor mode; public site shows per-category only
+  const categoryNames = isEditing
+    ? ['all', ...displayCategories.map(c => c.id)]
+    : displayCategories.map(c => c.id);
+
+  // On public site, if activeCategory is 'all' or invalid, default to first visible category
+  const effectiveActiveCategory = (() => {
+    if (isEditing) return activeCategory;
+    if (categoryNames.includes(activeCategory)) return activeCategory;
+    return categoryNames[0] || 'all';
+  })();
+
+  const filteredItems = effectiveActiveCategory === 'all'
+    ? visibleItems
+    : visibleItems.filter(item => item.category === effectiveActiveCategory);
   const getCategoryName = (id: string) => {
     if (id === 'all') return 'All';
     const cat = categories.find(c => c.id === id);
@@ -167,42 +183,63 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
             return (
               <div key={category} className="relative group">
                 {isEditing && !isAllCategory && (
-                  <button
-                    onClick={async () => {
-                      setConfirmModal({
-                        isOpen: true,
-                        title: `Delete Category`,
-                        message: `Are you sure you want to delete the "${getCategoryName(category)}" category?`,
-                        onConfirm: async () => {
-                          try {
-                            const newCategories = categories.filter(c => c.id !== category);
-                            await saveField('menu', 'categories', newCategories);
+                  <div className="absolute -top-2 -right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {/* Visibility Toggle */}
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const newCategories = categories.map(c =>
+                          c.id === category ? { ...c, is_visible: c.is_visible === false ? true : false } : c
+                        );
+                        await saveField('menu', 'categories', newCategories);
+                        setCategories(newCategories);
+                      }}
+                      className={`rounded-full p-1 shadow-lg transition-colors ${categoryObj?.is_visible !== false
+                        ? 'bg-green-500 hover:bg-green-600 text-white'
+                        : 'bg-gray-400 hover:bg-gray-500 text-white'
+                        }`}
+                      title={categoryObj?.is_visible !== false ? 'Visible – click to hide on live site' : 'Hidden – click to show on live site'}
+                    >
+                      {categoryObj?.is_visible !== false ? <Eye size={12} /> : <EyeOff size={12} />}
+                    </button>
+                    {/* Delete */}
+                    <button
+                      onClick={async () => {
+                        setConfirmModal({
+                          isOpen: true,
+                          title: `Delete Category`,
+                          message: `Are you sure you want to delete the "${getCategoryName(category)}" category?`,
+                          onConfirm: async () => {
+                            try {
+                              const newCategories = categories.filter(c => c.id !== category);
+                              await saveField('menu', 'categories', newCategories);
 
-                            setCategories(newCategories);
-                            if (activeCategory === category) {
-                              setActiveCategory('all');
+                              setCategories(newCategories);
+                              if (activeCategory === category) {
+                                setActiveCategory('all');
+                              }
+                              setConfirmModal(null);
+                            } catch (error) {
+                              setConfirmModal(null);
+                              console.error('Error deleting category:', error);
+                              showToast('Failed to delete category. Please try again.', 'error');
                             }
-                            setConfirmModal(null);
-                          } catch (error) {
-                            setConfirmModal(null);
-                            console.error('Error deleting category:', error);
-                            showToast('Failed to delete category. Please try again.', 'error');
                           }
-                        }
-                      });
-                    }}
-                    className="absolute -top-2 -right-2 z-10 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors shadow-lg opacity-0 group-hover:opacity-100"
-                    title="Delete category"
-                  >
-                    <X size={12} />
-                  </button>
+                        });
+                      }}
+                      className="bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors shadow-lg"
+                      title="Delete category"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
                 )}
                 <button
                   onClick={() => setActiveCategory(category)}
-                  className={`px-6 py-2 rounded-full font-serif font-bold text-lg capitalize transition-all duration-300 relative ${activeCategory === category
+                  className={`px-6 py-2 rounded-full font-serif font-bold text-lg capitalize transition-all duration-300 relative ${effectiveActiveCategory === category
                     ? 'bg-bakery-primary text-white shadow-md transform scale-105'
                     : 'bg-bakery-light text-bakery-dark border border-bakery-sand hover:border-bakery-primary hover:text-bakery-primary'
-                    }`}
+                    } ${!isAllCategory && (categoryObj?.is_visible === false) && isEditing ? 'opacity-50 line-through' : ''}`}
                 >
                   {isEditing && !isAllCategory && categoryObj ? (
                     <EditableText

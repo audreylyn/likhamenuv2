@@ -293,6 +293,7 @@ export interface MenuSectionConfig {
   layout: 'tabs' | 'accordion' | 'grid';
   show_images: boolean;
   show_add_to_cart: boolean;
+  show_products?: boolean; // Toggle to enable/disable product grid rendering (defaults to true)
   created_at: string;
   updated_at: string;
 }
