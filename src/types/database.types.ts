@@ -584,6 +584,52 @@ export interface ChatSupportConfig {
 // PACKAGES / SERVICES TYPES
 // =====================================================
 
+// =====================================================
+// GALLERY TYPES
+// =====================================================
+
+export interface GalleryImage {
+  id: string;
+  website_id: string;
+  src: string;
+  alt?: string;
+  caption?: string;
+  category_id: string;
+  is_featured: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GalleryCategory {
+  id: string;
+  website_id: string;
+  name: string;
+  display_order: number;
+  is_visible: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GallerySectionConfig {
+  id: string;
+  website_id: string;
+  heading: string;
+  subheading?: string;
+  layout: 'grid' | 'masonry';
+  columns: number;
+  show_captions: boolean;
+  show_carousel: boolean;
+  carousel_autoplay: boolean;
+  carousel_interval: number; // ms
+  created_at: string;
+  updated_at: string;
+}
+
+// =====================================================
+// PACKAGES TYPES
+// =====================================================
+
 export interface PackageInclusion {
   id: string;
   heading: string;
@@ -697,6 +743,11 @@ export interface FullWebsiteData {
     config: PackagesSectionConfig;
     categories: PackageCategory[];
     items: ServicePackage[];
+  };
+  gallery?: {
+    config: GallerySectionConfig;
+    categories: GalleryCategory[];
+    images: GalleryImage[];
   };
 }
 

@@ -137,6 +137,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   // Auto-inject nav items for enabled sections that have no nav link yet
   const sectionsNeedingAutoLink: { section: string; label: string; afterSection: string }[] = [
     { section: 'packages', label: 'Packages', afterSection: 'menu' },
+    { section: 'gallery', label: 'Gallery', afterSection: 'packages' },
   ];
 
   let enrichedNavItems = [...rawNavItems];

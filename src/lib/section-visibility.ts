@@ -20,6 +20,7 @@ const ALL_SECTIONS = [
   "featuredProducts",
   "menu",
   "packages",
+  "gallery",
   "catalogue",
   "reservation",
   "testimonials",

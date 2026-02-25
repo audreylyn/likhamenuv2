@@ -37,6 +37,11 @@ const SECTION_DEFINITIONS = [
     description: "Service packages with Messenger inquiry",
   },
   {
+    name: "gallery",
+    label: "Gallery",
+    description: "Photo gallery with carousel and lightbox",
+  },
+  {
     name: "catalogue",
     label: "Catalogue",
     description: "Product showcase (No ordering)",

@@ -544,6 +544,36 @@ export const DEFAULT_WEBSITE_CONTENT = {
       },
     ],
   },
+
+  gallery: {
+    config: {
+      id: "1",
+      website_id: "",
+      heading: "Gallery",
+      subheading: "A glimpse of our work and events",
+      layout: "grid",
+      columns: 3,
+      show_captions: true,
+      show_carousel: true,
+      carousel_autoplay: true,
+      carousel_interval: 4000,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    categories: [
+      { id: "gal-cat1", website_id: "", name: "Events", display_order: 1, is_visible: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      { id: "gal-cat2", website_id: "", name: "Food", display_order: 2, is_visible: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      { id: "gal-cat3", website_id: "", name: "Setup", display_order: 3, is_visible: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    ],
+    images: [
+      { id: "gal1", website_id: "", src: "https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=800&q=80", alt: "Wedding reception setup", caption: "Elegant wedding reception", category_id: "gal-cat1", is_featured: true, display_order: 1, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      { id: "gal2", website_id: "", src: "https://images.unsplash.com/photo-1555244162-803834f70033?w=800&q=80", alt: "Gourmet spread", caption: "Buffet arrangement", category_id: "gal-cat2", is_featured: true, display_order: 2, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      { id: "gal3", website_id: "", src: "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=800&q=80", alt: "Event decorations", caption: "Themed party decorations", category_id: "gal-cat3", is_featured: false, display_order: 3, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      { id: "gal4", website_id: "", src: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&q=80", alt: "Plated dish", caption: "Signature plated dish", category_id: "gal-cat2", is_featured: true, display_order: 4, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      { id: "gal5", website_id: "", src: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=800&q=80", alt: "Birthday celebration", caption: "Birthday party setup", category_id: "gal-cat1", is_featured: false, display_order: 5, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      { id: "gal6", website_id: "", src: "https://images.unsplash.com/photo-1478146059778-26028b07395a?w=800&q=80", alt: "Table arrangement", caption: "Elegant table arrangement", category_id: "gal-cat3", is_featured: false, display_order: 6, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    ],
+  },
 };
 
 /**
