@@ -87,7 +87,11 @@ export const Gallery: React.FC = () => {
   }, [websiteData, websiteLoading, isEditing, saveField]);
 
   // --- Carousel ---
-  const featuredImages = images.filter(img => img.is_featured);
+  // Auto-feature: if no images are marked as featured, use the first 3+ images for the carousel
+  const explicitlyFeatured = images.filter(img => img.is_featured);
+  const featuredImages = explicitlyFeatured.length > 0
+    ? explicitlyFeatured
+    : images.filter(img => img.src).slice(0, Math.min(5, images.length));
 
   const startCarouselTimer = useCallback(() => {
     if (carouselTimerRef.current) clearInterval(carouselTimerRef.current);
@@ -506,7 +510,7 @@ export const Gallery: React.FC = () => {
               </div>
 
               {/* Caption */}
-              {config.show_captions && (
+              {config.show_captions && (isEditing || img.caption) && (
                 <div className="p-3">
                   {isEditing ? (
                     <EditableText
@@ -521,11 +525,9 @@ export const Gallery: React.FC = () => {
                       className="font-sans text-sm text-bakery-text/80 leading-relaxed"
                     />
                   ) : (
-                    img.caption && (
-                      <p className="font-sans text-sm text-bakery-text/80 leading-relaxed">
-                        {img.caption}
-                      </p>
-                    )
+                    <p className="font-sans text-sm text-bakery-text/80 leading-relaxed">
+                      {img.caption}
+                    </p>
                   )}
                 </div>
               )}
