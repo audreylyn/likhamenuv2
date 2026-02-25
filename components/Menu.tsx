@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MenuItem } from '../types';
-import { ShoppingBag, Eye, EyeOff, X, Star, Plus, Trash2, ToggleLeft, ToggleRight, Upload } from 'lucide-react';
-import { getWebsiteId } from '../src/lib/supabase'; // Keep getWebsiteId if needed for other things, but maybe not?
+import { ShoppingBag, Eye, EyeOff, X, Star, Plus, Trash2, ToggleLeft, ToggleRight, Upload, Download, FileUp, Loader2 } from 'lucide-react';
+import { getWebsiteId, supabase } from '../src/lib/supabase';
 import type { MenuCategory, MenuItem as DBMenuItem, MenuSectionConfig } from '../src/types/database.types';
 import { EditableText } from '../src/components/editor/EditableText';
 import { EditableImage } from '../src/components/editor/EditableImage';
@@ -41,6 +41,8 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
   const [selectedItem, setSelectedItem] = useState<MenuItemWithRating | null>(null);
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
   const [batchUploadOpen, setBatchUploadOpen] = useState(false);
+  const [pdfUploading, setPdfUploading] = useState(false);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
   const { isEditing, saveField } = useEditor();
   const { websiteData, loading: websiteLoading } = useWebsite();
   const { showToast } = useToast();
@@ -583,6 +585,104 @@ export const Menu: React.FC<MenuProps> = ({ addToCart }) => {
         </div>
 
       </div>
+
+      {/* Download Menu PDF Section */}
+      {(config.menu_pdf_url || isEditing) && (
+        <div className="mt-12 text-center">
+          {config.menu_pdf_url && (
+            <a
+              href={config.menu_pdf_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              download
+              className="inline-flex items-center gap-3 px-8 py-4 bg-bakery-dark text-white rounded-xl font-serif font-bold text-lg hover:bg-bakery-primary hover:shadow-xl transition-all duration-300 group"
+            >
+              <Download size={22} className="group-hover:animate-bounce" />
+              Download Full Menu (PDF)
+            </a>
+          )}
+
+          {isEditing && (
+            <div className="mt-4 flex flex-col items-center gap-3">
+              <input
+                ref={pdfInputRef}
+                type="file"
+                accept=".pdf,application/pdf"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+
+                  if (file.type !== 'application/pdf') {
+                    showToast('Please select a PDF file.', 'error');
+                    return;
+                  }
+
+                  setPdfUploading(true);
+                  try {
+                    const fileName = `menu-pdf-${Date.now()}.pdf`;
+                    const { data, error: uploadError } = await supabase.storage
+                      .from('images')
+                      .upload(fileName, file, {
+                        cacheControl: '3600',
+                        upsert: false,
+                      });
+
+                    if (uploadError) throw uploadError;
+
+                    const { data: urlData } = supabase.storage
+                      .from('images')
+                      .getPublicUrl(data.path);
+
+                    const newConfig = { ...config, menu_pdf_url: urlData.publicUrl };
+                    await saveField('menu', 'config', newConfig);
+                    setConfig(newConfig);
+                    showToast('PDF menu uploaded successfully!', 'success');
+                  } catch (err: any) {
+                    console.error('PDF upload error:', err);
+                    showToast(err.message || 'Failed to upload PDF.', 'error');
+                  } finally {
+                    setPdfUploading(false);
+                    if (pdfInputRef.current) pdfInputRef.current.value = '';
+                  }
+                }}
+              />
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => pdfInputRef.current?.click()}
+                  disabled={pdfUploading}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-500 text-white rounded-lg font-sans font-medium text-sm hover:bg-blue-600 transition-colors disabled:opacity-50"
+                >
+                  {pdfUploading ? (
+                    <><Loader2 size={16} className="animate-spin" /> Uploading...</>
+                  ) : (
+                    <><FileUp size={16} /> {config.menu_pdf_url ? 'Replace PDF' : 'Upload PDF Menu'}</>
+                  )}
+                </button>
+
+                {config.menu_pdf_url && (
+                  <button
+                    onClick={async () => {
+                      const newConfig = { ...config, menu_pdf_url: undefined };
+                      await saveField('menu', 'config', newConfig);
+                      setConfig(newConfig);
+                      showToast('PDF menu removed.', 'success');
+                    }}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-500 text-white rounded-lg font-sans font-medium text-sm hover:bg-red-600 transition-colors"
+                  >
+                    <X size={16} /> Remove PDF
+                  </button>
+                )}
+              </div>
+
+              {config.menu_pdf_url && (
+                <p className="text-bakery-text/50 text-xs font-sans">PDF uploaded ✓</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Product Detail Modal */}
       {selectedItem && (

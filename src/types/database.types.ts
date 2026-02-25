@@ -294,6 +294,7 @@ export interface MenuSectionConfig {
   show_images: boolean;
   show_add_to_cart: boolean;
   show_products?: boolean; // Toggle to enable/disable product grid rendering (defaults to true)
+  menu_pdf_url?: string; // URL to downloadable PDF menu file
   created_at: string;
   updated_at: string;
 }
