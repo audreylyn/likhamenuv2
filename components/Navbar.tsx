@@ -133,7 +133,31 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   // Filter nav items based on section visibility
   const rawNavItems = localContent.nav_items || DEFAULT_NAVBAR.nav_items;
-  const navItems = rawNavItems.filter((item: any) => {
+
+  // Auto-inject nav items for enabled sections that have no nav link yet
+  const sectionsNeedingAutoLink: { section: string; label: string; afterSection: string }[] = [
+    { section: 'packages', label: 'Packages', afterSection: 'menu' },
+  ];
+
+  let enrichedNavItems = [...rawNavItems];
+  if (!isBasicPlan) {
+    for (const auto of sectionsNeedingAutoLink) {
+      const hasLink = enrichedNavItems.some((item: any) => (item.href || '').includes(`#${auto.section}`));
+      if (!hasLink && sectionVisibility[auto.section]) {
+        // Insert after the "afterSection" link, or at the end
+        const afterIdx = enrichedNavItems.findIndex((item: any) => (item.href || '').includes(`#${auto.afterSection}`));
+        const maxOrder = enrichedNavItems.reduce((max: number, item: any) => Math.max(max, item.order || 0), 0);
+        const newItem = { label: auto.label, href: `#${auto.section}`, order: maxOrder + 1 };
+        if (afterIdx >= 0) {
+          enrichedNavItems.splice(afterIdx + 1, 0, newItem);
+        } else {
+          enrichedNavItems.push(newItem);
+        }
+      }
+    }
+  }
+
+  const navItems = enrichedNavItems.filter((item: any) => {
     // Basic Plan Logic
     if (isBasicPlan) {
       return item.label === "Home" || item.label === "Menu";

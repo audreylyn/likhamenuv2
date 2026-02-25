@@ -16,6 +16,7 @@ import { Testimonials } from "../../components/Testimonials";
 import { SpecialOffers } from "../../components/SpecialOffers";
 import { FeaturedProducts } from "../../components/FeaturedProducts";
 import { Catalogue } from "../../components/Catalogue";
+import { Packages } from "../../components/Packages";
 import { InstagramFeed } from "../../components/InstagramFeed";
 import { Cart } from "../../components/Cart";
 import { Reservation } from "../../components/Reservation";
@@ -279,6 +280,9 @@ export const PublicSite: React.FC = () => {
         </ConditionalSection>
         <ConditionalSection section="catalogue">
           <Catalogue />
+        </ConditionalSection>
+        <ConditionalSection section="packages">
+          <Packages />
         </ConditionalSection>
         <ConditionalSection section="reservation">
           <Reservation />

@@ -32,6 +32,11 @@ const SECTION_DEFINITIONS = [
   },
   { name: "menu", label: "Menu Section", description: "Product menu" },
   {
+    name: "packages",
+    label: "Packages / Services",
+    description: "Service packages with Messenger inquiry",
+  },
+  {
     name: "catalogue",
     label: "Catalogue",
     description: "Product showcase (No ordering)",

@@ -581,6 +581,56 @@ export interface ChatSupportConfig {
 }
 
 // =====================================================
+// PACKAGES / SERVICES TYPES
+// =====================================================
+
+export interface PackageInclusion {
+  id: string;
+  heading: string;
+  items: string[];
+}
+
+export interface ServicePackage {
+  id: string;
+  website_id: string;
+  name: string;
+  description?: string;
+  price: number;
+  image_url?: string;
+  capacity?: string; // e.g., "50 Pax", "100 Pax"
+  category_id: string;
+  inclusions: PackageInclusion[];
+  is_available: boolean;
+  display_order: number;
+  badges?: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PackageCategory {
+  id: string;
+  website_id: string;
+  name: string;
+  display_order: number;
+  is_visible: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PackagesSectionConfig {
+  id: string;
+  website_id: string;
+  heading: string;
+  subheading?: string;
+  messenger_prefill_template?: string; // e.g., "Hi! I'm interested in {package_name} ({price}) for {capacity}. My event date is ___"
+  layout: 'grid' | 'list';
+  show_inclusions: boolean;
+  show_capacity_badge: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// =====================================================
 // AI GENERATION TYPES
 // =====================================================
 
@@ -642,6 +692,11 @@ export interface FullWebsiteData {
   catalogue?: {
     config: FeaturedProductsConfig; // Reusing FeaturedProductsConfig as structure is identical
     products: Product[];
+  };
+  packages?: {
+    config: PackagesSectionConfig;
+    categories: PackageCategory[];
+    items: ServicePackage[];
   };
 }
 

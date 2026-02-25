@@ -465,6 +465,85 @@ export const DEFAULT_WEBSITE_CONTENT = {
     },
     instructions: "After payment, kindly send a screenshot of your receipt via Viber/SMS to confirm your order."
   },
+  packages: {
+    config: {
+      id: "1",
+      heading: "Our Packages",
+      subheading: "Choose the perfect package for your event",
+      messenger_prefill_template: "Hi! I'm interested in {package_name} (₱{price}) for {capacity}. My event date is ___. Can you provide more details?",
+      layout: "grid",
+      show_inclusions: true,
+      show_capacity_badge: true,
+    },
+    categories: [
+      { id: "pkg-cat1", name: "50 Pax", display_order: 1, is_visible: true },
+      { id: "pkg-cat2", name: "100 Pax", display_order: 2, is_visible: true },
+    ],
+    items: [
+      {
+        id: "pkg1",
+        name: "Starter Package",
+        description: "Perfect for intimate gatherings and small celebrations.",
+        price: 10988,
+        capacity: "50 Pax",
+        category_id: "pkg-cat1",
+        image_url: "https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=800&q=80",
+        is_available: true,
+        display_order: 1,
+        badges: ["Popular"],
+        inclusions: [
+          {
+            id: "inc1",
+            heading: "Venue & Setup",
+            items: ["Tent (20ft x 30ft) with installation", "Basic ceiling treatment & decoration", "Mood lights & decors"]
+          },
+          {
+            id: "inc2",
+            heading: "Catering",
+            items: ["Buffet table with skirting", "3 main course dishes", "2 side dishes", "Rice & drinks"]
+          },
+          {
+            id: "inc3",
+            heading: "Staff",
+            items: ["1 Event coordinator", "3 Waiters", "1 Beverage attendant"]
+          }
+        ],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: "pkg2",
+        name: "Premium Package",
+        description: "Our most popular package for mid-size events and parties.",
+        price: 24988,
+        capacity: "100 Pax",
+        category_id: "pkg-cat2",
+        image_url: "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=800&q=80",
+        is_available: true,
+        display_order: 2,
+        badges: ["Best Value"],
+        inclusions: [
+          {
+            id: "inc4",
+            heading: "Venue & Setup",
+            items: ["Tent (30ft x 40ft) with installation", "Premium ceiling treatment", "Drapery & themed decors", "Stage with backdrop"]
+          },
+          {
+            id: "inc5",
+            heading: "Catering",
+            items: ["Buffet table with full skirting", "5 main course dishes", "3 side dishes", "Rice, drinks & dessert"]
+          },
+          {
+            id: "inc6",
+            heading: "Staff & Entertainment",
+            items: ["1 Event host", "5 Wait staff", "Sound system with DJ", "Videoke machine"]
+          }
+        ],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ],
+  },
 };
 
 /**

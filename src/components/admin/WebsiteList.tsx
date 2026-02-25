@@ -44,6 +44,7 @@ const SECTION_DEFINITIONS = [
   { name: "team", label: "Team Section" },
   { name: "featuredProducts", label: "Featured Products" },
   { name: "menu", label: "Menu Section" },
+  { name: "packages", label: "Packages / Services" },
   { name: "reservation", label: "Reservation" },
   { name: "testimonials", label: "Testimonials" },
   { name: "faq", label: "FAQ Section" },

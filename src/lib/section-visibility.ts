@@ -19,6 +19,7 @@ const ALL_SECTIONS = [
   "team",
   "featuredProducts",
   "menu",
+  "packages",
   "catalogue",
   "reservation",
   "testimonials",

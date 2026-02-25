@@ -99,6 +99,7 @@ export const WebsiteProvider: React.FC<{ children: React.ReactNode }> = ({
       "team",
       "featuredProducts",
       "menu",
+      "packages",
       "reservation",
       "testimonials",
       "specialOffers",
