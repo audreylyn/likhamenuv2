@@ -128,27 +128,52 @@ export const Footer: React.FC = () => {
     return true; // Default to true if unknown
   };
 
-  const quickLinks = [
-    { label: "Home", href: "#hero" },
-    { label: "Menu", href: "#menu" },
-    { label: "About Us", href: "#about" },
-    { label: "Contact", href: "#contact" },
+  // Build quick links from navbar nav_items (same source as Navbar component)
+  const isBasicPlan = websiteData?.marketing?.plan_id === 'basic';
+  const navbarData = websiteData?.content?.navbar;
+  const rawNavItems: any[] = navbarData?.nav_items || [
+    { label: "Home", href: "#hero", order: 0 },
+    { label: "Menu", href: "#menu", order: 1 },
+    { label: "About Us", href: "#about", order: 2 },
+    { label: "Contact", href: "#contact", order: 3 },
   ];
 
-  // Requirement: "just bring back the navbar, but in basic only the home, menu same goes with quick links"
-  const isBasicPlan = websiteData?.marketing?.plan_id === 'basic';
+  // Auto-inject nav items for enabled sections that have no nav link yet (mirrors Navbar logic)
+  const sectionsNeedingAutoLink = [
+    { section: 'packages', label: 'Packages', afterSection: 'menu' },
+    { section: 'gallery', label: 'Gallery', afterSection: 'packages' },
+  ];
 
-  const displayedQuickLinks = quickLinks.filter(link => {
+  let enrichedNavItems = [...rawNavItems];
+  if (!isBasicPlan) {
+    for (const auto of sectionsNeedingAutoLink) {
+      const hasLink = enrichedNavItems.some((item: any) => (item.href || '').includes(`#${auto.section}`));
+      if (!hasLink && sectionVisibility[auto.section]) {
+        const afterIdx = enrichedNavItems.findIndex((item: any) => (item.href || '').includes(`#${auto.afterSection}`));
+        const maxOrder = enrichedNavItems.reduce((max: number, item: any) => Math.max(max, item.order || 0), 0);
+        const newItem = { label: auto.label, href: `#${auto.section}`, order: maxOrder + 1 };
+        if (afterIdx >= 0) {
+          enrichedNavItems.splice(afterIdx + 1, 0, newItem);
+        } else {
+          enrichedNavItems.push(newItem);
+        }
+      }
+    }
+  }
+
+  const displayedQuickLinks = enrichedNavItems.filter((item: any) => {
     if (isBasicPlan) {
-      return link.label === "Home" || link.label === "Menu";
+      return item.label === "Home" || item.label === "Menu";
     }
-    const sectionId = link.href.replace('#', '');
+    const href = item.href || "";
+    if (!href.startsWith("#")) return true;
+    const sectionId = href.substring(1);
     return isSectionVisible(sectionId);
-  }).map(link => {
-    if (isBasicPlan && link.label === "Menu") {
-      return { ...link, href: "#catalogue" };
+  }).map((item: any) => {
+    if (isBasicPlan && item.label === "Menu") {
+      return { ...item, label: item.label, href: "#catalogue" };
     }
-    return link;
+    return { label: item.label, href: item.href };
   });
 
 
