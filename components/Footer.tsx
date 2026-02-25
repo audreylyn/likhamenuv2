@@ -64,7 +64,17 @@ export const Footer: React.FC = () => {
 
     if (footerData) {
       setFooterContent(footerData);
-      if (footerData.about_text) setAboutText(footerData.about_text);
+      if (footerData.about_text) {
+        setAboutText(footerData.about_text);
+      } else {
+        // Footer exists but no about_text — use the about section description or fallback
+        const aboutDesc = websiteData?.content?.about?.description;
+        if (aboutDesc) {
+          setAboutText(typeof aboutDesc === 'string' ? aboutDesc : '');
+        } else {
+          setAboutText("Bringing warmth to your day, one pastry at a time. Baked fresh daily with love and the finest ingredients.");
+        }
+      }
       if (footerData.copyright_text) {
         setCopyrightText(footerData.copyright_text);
       } else {
@@ -111,8 +121,20 @@ export const Footer: React.FC = () => {
           url: socials.twitter,
           icon: <Twitter size={24} />,
         });
-      // We could add more if we map them or store them differently. 
-      // For now this matches original logic.
+      if (socials.linkedin)
+        links.push({
+          id: "4",
+          platform: "LinkedIn",
+          url: socials.linkedin,
+          icon: <Linkedin size={24} />,
+        });
+      if (socials.youtube)
+        links.push({
+          id: "5",
+          platform: "YouTube",
+          url: socials.youtube,
+          icon: <Youtube size={24} />,
+        });
       setSocialLinks(links);
     }
   };
