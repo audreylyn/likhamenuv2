@@ -544,7 +544,7 @@ export const Packages: React.FC<PackagesProps> = () => {
 
                 {/* Price Banner */}
                 <div className="bg-gradient-to-r from-bakery-dark to-bakery-primary px-6 py-3 flex items-center justify-between">
-                  <span className="text-white/80 font-sans text-sm font-medium">Starting at</span>
+                  <span className="text-white/80 font-sans text-sm font-medium">Price</span>
                   <div className="flex-shrink-0">
                     {isEditing ? (
                       <EditableText
